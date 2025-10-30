@@ -199,10 +199,11 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
     log_likelihood = 0
     K = len(cw_matrix)
     n = mean_matrix[0].shape[0]
-
+    #data set log likeliness loop
     for i in range(ext_matrix.shape[0]):
-        x_i = ext_matrix[i]
+        x_i = ext_matrix[i, :n]
         total_pdf = 0
+        #PDF calculation loop
         for k in range(K):
             mu = mean_matrix[k]
             sigma = cov_matrix[k * 2: k * 2 + 2, :]
@@ -218,21 +219,17 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
     return log_likelihood
 
 
-def EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations):
-        if iterations < 0:
-            return False
-        elif (dataset_log_likelihood_matrix[iterations] - dataset_log_likelihood_matrix[iterations - 1]) >= 0.01:
-            return True
-        else:
-            return False
+def EM_uwplatt_test_convergence(log_likelihoods, iterations):
+    #1e-4 is supposedly the standard threshold for relative thresholding
+    threshold = 1e-4
+    if iterations < 1:
+        return False
+    previous = log_likelihoods[iterations - 1]
+    current = log_likelihoods[iterations]
+    #1e-12 is added to prevent division by 0
+    change = abs(current - previous) / (abs(previous) + 1e-12)
+    return change < threshold
 
-
-# e. During its runtime, EM_uwplatt() will collect and store dataset log likelihoods in a row
-# matrix dataset_log_likelihood_matrix.
-# f. The EM_uwplatt() function will return a reference to the mean_matrix,
-# cov_matrix, component_weights_matrix, and
-# dataset_log_likelihood_matrix together with the number of iterations it took for
-# the algorithm to converge on the given dataset.
 def EM_uwplatt(data_matrix, no_of_components):
     has_completed = False
 
@@ -242,7 +239,7 @@ def EM_uwplatt(data_matrix, no_of_components):
     dataset_log_likelihood_matrix = []
     iterations = 0
 
-    while not has_completed:
+    while not has_completed and iterations < 100:
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix,
                                                                                     component_weights_matrix)
@@ -260,18 +257,20 @@ def main():
     mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(
         generate_dataset(num_components, 1000), num_components)
 
-    x = list(range(iterations))
-    plt.plot(x, dataset_log_likelihood_matrix)
+    x = list(range(len(dataset_log_likelihood_matrix)))
+    y = dataset_log_likelihood_matrix
+
+    #Graph parameters created using co-pilot
+    plt.figure(figsize=(8, 5))
+    plt.plot(x, y, marker="o", linestyle="-", color="black")
     plt.xlabel("Iterations")
-    plt.ylabel("Likelihoods")
-    plt.title("Log likelihoods trend")
+    plt.ylabel("Log-Likelihood")
+    plt.title("EM Convergence: Log-Likelihood Trend")
+    plt.grid(True)
+    plt.tight_layout()
     plt.show()
-
-    # After the EM algorithm finishes, main() will produce a
-    # 3D plot of the trained GMM pdf and its final contour plot.
-    # It will also plot the dataset log likelihood trend over the training iterations.
-
 
 if __name__ == "__main__":
     main()
+
 
