@@ -194,15 +194,38 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
   return None # Produces a contour plot
 
-def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
-  return None # dataset log likelihood
 
-# based on the previous and current dataset
-    # log likelihoods and based on some criterion of your choice, produces a flag indicating
-    # whether the training sufficiently converged or should continue with another iteration of
-    # the E and M steps
-def EM_uwplatt_test_convergence():
-  return True
+def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
+    log_likelihood = 0
+    K = len(cw_matrix)
+    n = mean_matrix[0].shape[0]
+
+    for i in range(ext_matrix.shape[0]):
+        x_i = ext_matrix[i]
+        total_pdf = 0
+        for k in range(K):
+            mu = mean_matrix[k]
+            sigma = cov_matrix[k * 2: k * 2 + 2, :]
+            w = cw_matrix[k]
+
+            sigma_det = np.linalg.det(sigma)
+            sigma_inv = np.linalg.inv(sigma)
+            N = np.sqrt((2 * np.pi) ** n * sigma_det)
+            fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
+            total_pdf += w * np.exp(-fac / 2) / N
+        log_likelihood += np.log(total_pdf)
+
+    return log_likelihood
+
+
+def EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations):
+        if iterations < 0:
+            return False
+        elif (dataset_log_likelihood_matrix[iterations] - dataset_log_likelihood_matrix[iterations - 1]) >= 0.01:
+            return True
+        else:
+            return False
+
 
 # e. During its runtime, EM_uwplatt() will collect and store dataset log likelihoods in a row
 # matrix dataset_log_likelihood_matrix.
@@ -211,28 +234,38 @@ def EM_uwplatt_test_convergence():
 # dataset_log_likelihood_matrix together with the number of iterations it took for
 # the algorithm to converge on the given dataset.
 def EM_uwplatt(data_matrix, no_of_components):
-  has_completed = False
+    has_completed = False
 
-  ext_matrix, mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_init(data_matrix, no_of_components)
+    ext_matrix, mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_init(data_matrix, no_of_components)
 
-  print(component_weights_matrix)
-  dataset_log_likelihood_matrix = None
-  iterations = 0
+    print(component_weights_matrix)
+    dataset_log_likelihood_matrix = []
+    iterations = 0
 
-  while not has_completed:
-    ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-    mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-    EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    liklihood = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
+    while not has_completed:
+        ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
+        mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix,
+                                                                                    component_weights_matrix)
+        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+        likelihood = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
+        dataset_log_likelihood_matrix.append(likelihood)
+        has_completed = EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations)
+        iterations += 1
 
-    has_completed = EM_uwplatt_test_convergence()
-    iterations += 1
+    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
 
-  return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
 
 def main():
-  num_components = 5
-  mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 1000), num_components)
+    num_components = 5
+    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(
+        generate_dataset(num_components, 1000), num_components)
+
+    x = list(range(iterations))
+    plt.plot(x, dataset_log_likelihood_matrix)
+    plt.xlabel("Iterations")
+    plt.ylabel("Likelihoods")
+    plt.title("Log likelihoods trend")
+    plt.show()
 
     # After the EM algorithm finishes, main() will produce a
     # 3D plot of the trained GMM pdf and its final contour plot.
