@@ -223,8 +223,55 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
     # X = np.linspace(flat_min[0], flat_max[0], N)
-    X = np.linspace(-35, 35, N)
-    Y = np.linspace(-35, 35, N)
+    X = np.linspace(-40, 40, N)
+    Y = np.linspace(-40, 40, N)
+    X, Y = np.meshgrid(X, Y)
+
+    # Pack X and Y into a single 3-dimensional array
+    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
+    pos[:, :, 0] = X
+    pos[:, :, 1] = Y
+
+    Z = 0
+
+    for i in range(no_components):
+        Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
+    '''
+    # Create a surface plot and projected filled contour plot under it
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.plot_surface(X, Y, Z, rstride=3, cstride=3, linewidth=1, antialiased=True, cmap=cm.viridis)
+    # Adjust the limits, ticks and view angle
+    ax.set_zlim(0, 0.002)
+    ax.set_zticks(np.linspace(0, 0.002, 5))
+    ax.view_init(27, -21)
+    plt.show()
+
+    # Contour Plot
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    cset = ax.contourf(X, Y, Z, zdir='z', offset=0, cmap=cm.viridis)
+    # Adjust the limits, ticks and view angle
+    ax.set_zlim(0, 0.02)
+    ax.set_zticks(np.linspace(0, 0.002, 5))
+    ax.view_init(27, -21)
+    plt.show()
+    '''
+    plt.contourf(X, Y, Z)
+    plt.show()
+
+    return None  # Produces a contour plot
+
+def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix):
+    no_components = cw_matrix.size
+
+    flat_max = np.max(mean_matrix, axis=0)
+    flat_min = np.min(mean_matrix, axis=0)
+    # Our 2-dimensional distribution will be over variables X and Y
+    N = 60  # Number of ticks on X, Y axes
+    # X = np.linspace(flat_min[0], flat_max[0], N)
+    X = np.linspace(-40, 40, N)
+    Y = np.linspace(-40, 40, N)
     X, Y = np.meshgrid(X, Y)
 
     # Pack X and Y into a single 3-dimensional array
@@ -246,18 +293,6 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     ax.set_zticks(np.linspace(0, 0.002, 5))
     ax.view_init(27, -21)
     plt.show()
-
-    # Contour Plot
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    cset = ax.contourf(X, Y, Z, zdir='z', offset=0, cmap=cm.viridis)
-    # Adjust the limits, ticks and view angle
-    ax.set_zlim(0, 0.02)
-    ax.set_zticks(np.linspace(0, 0.002, 5))
-    ax.view_init(27, -21)
-    plt.show()
-
-    return None  # Produces a contour plot
 
 # Ashton, Zach
 def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
@@ -337,6 +372,9 @@ def main():
 
     x = list(range(len(dataset_log_likelihood_matrix)))
     y = dataset_log_likelihood_matrix
+
+    EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
 
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
