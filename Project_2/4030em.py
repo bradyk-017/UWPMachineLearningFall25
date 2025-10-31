@@ -283,11 +283,11 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
             fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
             total_pdf += w * np.exp(-fac / 2) / N
         # Added by Zach
-        total_pdf = total_pdf / K
+        # total_pdf = total_pdf / K
         log_likelihood += np.log(total_pdf)
 
     # Added by Zach
-    log_likelihood = log_likelihood / ext_matrix.shape[0]
+    # log_likelihood = log_likelihood / ext_matrix.shape[0]
     return log_likelihood
 
 
