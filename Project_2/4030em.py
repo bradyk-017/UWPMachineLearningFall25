@@ -8,9 +8,8 @@ from scipy.stats import norm
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 
-
 # Generates data from k-Means
-# Zach
+# Zach, from Project 1
 def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
     random_data = np.random.randn(no_of_points_per_cluster, 2)
 
@@ -34,8 +33,7 @@ def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
 
     return data_matrix
 
-
-# Zach
+# Zach, from Project 1
 def generate_random_shifts():
     mu_upper = 20
     mu_lower = -20
@@ -54,8 +52,7 @@ def generate_random_xy_shift():
 
     return x_mu, y_mu
 
-
-# Zach
+# Zach, from Project 1
 def shift_data(data, mu, sigma, fi):
     cos_fi = math.cos(fi)
     sin_fi = math.sin(fi)
@@ -66,7 +63,6 @@ def shift_data(data, mu, sigma, fi):
     shifted_data = Data_new.dot(rotate_matrix.T) + mu
 
     return shifted_data
-
 
 # Zach
 def EM_uwplatt_init(data_matrix, no_of_components):
@@ -100,7 +96,7 @@ def EM_uwplatt_init(data_matrix, no_of_components):
 
     return (ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
 
-
+# Brady
 def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_weights_matrix):
     ROWS = 0
     COLS = 1
@@ -150,7 +146,7 @@ def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_w
 
     return (extended_matrix)
 
-
+# Brady
 def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_weights_matrix):
     ROWS = 0
     COLS = 1
@@ -261,7 +257,7 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
 
     return None  # Produces a contour plot
 
-
+# Ashton, Zach
 def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
     log_likelihood = 0
     K = len(cw_matrix)
@@ -290,7 +286,7 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
     # log_likelihood = log_likelihood / ext_matrix.shape[0]
     return log_likelihood
 
-
+# Ashton
 def EM_uwplatt_test_convergence(log_likelihoods, iterations):
     # 1e-4 is supposedly the standard threshold for relative thresholding
     threshold = 1e-4
@@ -302,7 +298,7 @@ def EM_uwplatt_test_convergence(log_likelihoods, iterations):
     change = abs(current - previous) / (abs(previous) + 1e-12)
     return change < threshold
 
-
+# Titus
 def EM_uwplatt(data_matrix, no_of_components):
     has_completed = False
 
@@ -312,18 +308,23 @@ def EM_uwplatt(data_matrix, no_of_components):
     iterations = 0
 
     while not has_completed and iterations < 10:
+        # Re-calculate extended matrix and update others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-        mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix,
-                                                                                    component_weights_matrix)
+        mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
+        
+        # Plot the GMM contour
         EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+        
+        # Track perforcame of
         likelihood = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         dataset_log_likelihood_matrix.append(likelihood)
+
+        # Test the convergence to determine whether we should stop early
         # has_completed = EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations)
         iterations += 1
-
     return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
 
-
+# Titus, Zach
 def main():
     num_components = 5
     mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(
@@ -344,7 +345,6 @@ def main():
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-
 
 if __name__ == "__main__":
     main()
