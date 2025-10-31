@@ -1,12 +1,9 @@
 import numpy as np
-from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 import math
 import random as rand
-from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.stats import norm
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
 
 # Generates data from k-Means
 # Zach, from Project 1
@@ -79,6 +76,7 @@ def EM_uwplatt_init(data_matrix, no_of_components):
         mean_matrix[i][1] = y_mean + y_mu
 
     # Creates a matrix of no_of_component columns filled with 1 / no_of_components
+    # Initializing component weights
     component_weights_matrix = np.full(no_of_components, (1 / no_of_components))
 
     # Calculates the global covariance matrix and saves it to cov_matrix
