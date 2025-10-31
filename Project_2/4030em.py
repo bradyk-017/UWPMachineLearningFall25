@@ -235,7 +235,7 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     Z = 0
 
     for i in range(no_components):
-        Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i, :], cov_matrix[i*2:i*2+2, :])
+        Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
 
     # Create a surface plot and projected filled contour plot under it
     fig = plt.figure()
