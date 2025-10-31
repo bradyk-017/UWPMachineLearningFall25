@@ -104,13 +104,16 @@ def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_w
     no_components = component_weights_matrix.size
     no_dim = extended_matrix.shape[COLS] - no_components
 
-    mean_k = np.sqrt(np.square(mean_matrix[0, 0]) + np.square(mean_matrix[0, 1]))
-    std_dev_k = np.sqrt(np.square(cov_matrix[0, 0]) + np.square(cov_matrix[(0) + 1, 1]))
+    #mean_k = np.sqrt(np.square(mean_matrix[0, 0]) + np.square(mean_matrix[0, 1]))
+    #std_dev_k = np.sqrt(np.square(cov_matrix[0, 0]) + np.square(cov_matrix[(0) + 1, 1]))
 
     # Create Gaus Component Obj
-    gaus_comp = norm(loc=mean_k, scale=std_dev_k)
+    #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
 
-    pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim - 1])
+    #pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim-1])
+
+    pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[0,:], cov_matrix[:no_dim, :])
+
 
     # Calculate likelihood of the sample in the GMM
     lik_samp_GMM = component_weights_matrix[0] * pdfs_k
@@ -118,29 +121,30 @@ def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_w
     # Calculate likelihood of observing samples
     for j in range(1, no_components):
         # Calculate the mean std_dev of the k-th component
-        mean_k = np.sqrt(np.square(mean_matrix[j, 0]) + np.square(mean_matrix[j, 1]))
-        std_dev_k = np.sqrt(np.square(cov_matrix[j * 2, 0]) + np.square(cov_matrix[(j * 2) + 1, 1]))
+        #mean_k = np.sqrt(np.square(mean_matrix[j, 0]) + np.square(mean_matrix[j, 1]))
+        #std_dev_k = np.sqrt(np.square(cov_matrix[j * 2, 0]) + np.square(cov_matrix[(j * 2) + 1, 1]))
 
         # Create Gaus Component Obj
-        gaus_comp = norm(loc=mean_k, scale=std_dev_k)
+        #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
 
         # print(f"gaus_pdfs: {gaus_comp.pdf(extended_matrix[:, :no_dim-1])}")
-        pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim - 1])
+        #pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim - 1])
+        pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[j,:], cov_matrix[j*2:(j*2) + 2, :])
 
         # Calculate likelihood of the sample in the GMM
         lik_samp_GMM += component_weights_matrix[j] * pdfs_k
 
     for k in range(0, no_components):
         # Create Gaus Component Obj
-        gaus_comp = norm(loc=mean_k, scale=std_dev_k)
+        #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
 
-        pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim - 1])
+        pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[j,:], cov_matrix[j*2:(j*2) + 2, :])
 
         # Calculate the likelihoods that the samples come from the k-th component for N-th model
         lik_samp_k = component_weights_matrix[k] * pdfs_k
 
         # Calculate & membership weights
-        extended_matrix[:, no_dim + k:no_dim + k + 1] = np.divide(lik_samp_k, lik_samp_GMM)
+        extended_matrix[:, no_dim + k:no_dim + k + 1] = np.divide(lik_samp_k, lik_samp_GMM).reshape(no_samples,1)
 
     return (extended_matrix)
 
@@ -309,10 +313,10 @@ def EM_uwplatt(data_matrix, no_of_components):
         # Re-calculate extended matrix and update others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-        
+
         # Plot the GMM contour
         EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-        
+
         # Track perforcame of
         likelihood = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         dataset_log_likelihood_matrix.append(likelihood)
