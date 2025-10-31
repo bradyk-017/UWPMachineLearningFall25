@@ -5,6 +5,22 @@ import random as rand
 from scipy.stats import norm
 from matplotlib import cm
 
+
+# Generate static dataset for EM
+def generate_static_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
+    dataset = generate_dataset(no_of_clusters, no_of_points_per_cluster)
+
+    np.savetxt("static_dataset.csv", dataset, delimiter=",")
+    return
+
+def read_static_dataset(num_of_components):
+    dataset = np.loadtxt("static_dataset.csv", delimiter=",")
+    for i in range(num_of_components):
+        offset = i * 1000
+        plt.scatter(dataset[offset:(offset + 1000), 0], dataset[offset:(offset + 1000), 1])
+    plt.show()
+    return dataset
+
 # Generates data from k-Means
 # Zach, from Project 1
 def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
@@ -46,6 +62,8 @@ def generate_random_xy_shift():
     lower_bound = -5
     x_mu = rand.randrange(lower_bound, upper_bound)
     y_mu = rand.randrange(lower_bound, upper_bound)
+
+    static_shift = np.array([])
 
     return x_mu, y_mu
 
@@ -364,8 +382,17 @@ def EM_uwplatt(data_matrix, no_of_components):
 # Titus, Zach
 def main():
     num_components = 5
+
+    # generate_static_dataset(num_components, 1000)
+
+    dataset = read_static_dataset(num_components)
+
+
+    #mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(
+    #    generate_dataset(num_components, 1000), num_components)
+
     mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(
-        generate_dataset(num_components, 1000), num_components)
+       dataset, num_components)
 
     print(iterations)
     print(dataset_log_likelihood_matrix)
