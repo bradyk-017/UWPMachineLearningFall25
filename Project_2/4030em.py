@@ -156,7 +156,7 @@ def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_w
         # Create Gaus Component Obj
         #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
 
-        pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[j,:], cov_matrix[j*2:(j*2) + 2, :])
+        pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[k,:], cov_matrix[k*2:(k*2) + 2, :])
 
         # Calculate the likelihoods that the samples come from the k-th component for N-th model
         lik_samp_k = component_weights_matrix[k] * pdfs_k
@@ -270,7 +270,7 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     ax = fig.add_subplot(projection='3d')
     cset = ax.contourf(X, Y, Z, zdir='z', offset=0, cmap=cm.viridis)
     # Adjust the limits, ticks and view angle
-    ax.set_zlim(0, 0.2)
+    ax.set_zlim(0, 0.02)
     ax.set_zticks(np.linspace(0, 0.002, 5))
     ax.view_init(27, -21)
     plt.show()
@@ -362,7 +362,7 @@ def EM_uwplatt(data_matrix, no_of_components):
     dataset_log_likelihood_matrix = []
     iterations = 0
 
-    while not has_completed and iterations < 10:
+    while not has_completed:
         # Re-calculate extended matrix and update others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
@@ -375,7 +375,7 @@ def EM_uwplatt(data_matrix, no_of_components):
         dataset_log_likelihood_matrix.append(likelihood)
 
         # Test the convergence to determine whether we should stop early
-        # has_completed = EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations)
+        has_completed = EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations)
         iterations += 1
     return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
 
