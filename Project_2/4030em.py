@@ -175,8 +175,9 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
     no_components = component_weights_matrix.size
     no_dim = extended_matrix.shape[COLS] - no_components
 
-    # Calculate values for updates
+ # Calculate values for updates
     for k in range(0, no_components):
+        '''
         # Membership weights of k-th component
         membership_weights = extended_matrix[:, no_dim + k]
 
@@ -204,14 +205,32 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
         cov_num_yy = membership_weights * np.square(extended_matrix[:, 0] - mean_matrix[k, 1])
 
         # Update cov xx for matrix of component k
-        cov_matrix[(k * 2), 0] = np.sum(cov_num_xx, axis=ROWS) / sum_membership_weights
+        cov_matrix_xx = np.sum(cov_num_xx) / sum_membership_weights
+        cov_matrix[k*2, 0] = np.sum(cov_num_xx) / sum_membership_weights
 
         # Update cov xy = cov yx for matrix of component k
-        cov_matrix[(k * 2), 1] = np.sum(cov_num_xy, axis=ROWS) / sum_membership_weights
-        cov_matrix[(k * 2) + 1, 0] = np.sum(cov_num_xy, axis=ROWS) / sum_membership_weights
+        cov_matrix_xy = np.sum(cov_num_xy) / sum_membership_weights
+        cov_matrix_xy = np.sum(cov_num_xy) / sum_membership_weights
+        cov_matrix[k*2, 1] = np.sum(cov_num_xy) / sum_membership_weights
+        cov_matrix[k*2+1, 0] = cov_matrix[k*2, 1]
 
         # Update cov yy for matrix of component k
-        cov_matrix[(k * 2) + 1, 1] = np.sum(cov_num_yy, axis=ROWS) / sum_membership_weights
+        cov_matrix_yy = np.sum(cov_num_yy) / sum_membership_weights
+        cov_matrix[k*2+1, 1] = np.sum(cov_num_yy) / sum_membership_weights
+
+    print(f"Cov_matrix: {cov_matrix}\n")
+    print(f"component_weights_matrix: {component_weights_matrix})"
+    '''
+        membership_weights = extended_matrix[:, no_dim + k]
+        sum_weights = np.sum(membership_weights)
+        weighted_samples = membership_weights.reshape(no_samples, 1) * extended_matrix[:, :no_dim]
+        mean_matrix[k, :] = np.sum(weighted_samples, axis=0) / sum_weights
+
+        diff = extended_matrix[:, :no_dim] - mean_matrix[k]
+        weighted_diff = diff * membership_weights[:, np.newaxis]
+        cov_k = np.dot(weighted_diff.T, diff) / sum_weights
+
+        cov_matrix[k*2:(k*2)+2, :] = cov_k  # Assign to stacked format
 
     return (mean_matrix, cov_matrix, component_weights_matrix)
 
