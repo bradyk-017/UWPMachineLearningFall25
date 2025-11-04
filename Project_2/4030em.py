@@ -13,6 +13,7 @@ def generate_static_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
     np.savetxt("static_dataset.csv", dataset, delimiter=",")
     return
 
+# Gets the static dataset in the csv file for testing
 def read_static_dataset(num_of_components):
     dataset = np.loadtxt("static_dataset.csv", delimiter=",")
     for i in range(num_of_components):
@@ -58,12 +59,11 @@ def generate_random_shifts():
 
 # Zach
 def generate_random_xy_shift():
+    # Generates the shifts for the random shifted mean values
     upper_bound = 5
     lower_bound = -5
     x_mu = rand.randrange(lower_bound, upper_bound)
     y_mu = rand.randrange(lower_bound, upper_bound)
-
-    static_shift = np.array([])
 
     return x_mu, y_mu
 
@@ -255,11 +255,8 @@ def multivariate_gaussian(pos, mu, Sigma):
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     no_components = cw_matrix.size
 
-    flat_max = np.max(mean_matrix, axis=0)
-    flat_min = np.min(mean_matrix, axis=0)
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
-    # X = np.linspace(flat_min[0], flat_max[0], N)
     X = np.linspace(-30, 30, N)
     Y = np.linspace(-30, 30, N)
     X, Y = np.meshgrid(X, Y)
@@ -269,11 +266,13 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     pos[:, :, 0] = X
     pos[:, :, 1] = Y
 
+    # Iterates through the number of components and calculate the multivariate gaussian and scales it to the component weight
+    # Adds this to the z value that is used for the contour plot
     Z = 0
-
     for i in range(no_components):
         Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
 
+    # Adds the information to the contour plot and shows the plot
     plt.contourf(X, Y, Z)
     plt.show()
 
@@ -282,11 +281,8 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
 def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix):
     no_components = cw_matrix.size
 
-    flat_max = np.max(mean_matrix, axis=0)
-    flat_min = np.min(mean_matrix, axis=0)
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
-    # X = np.linspace(flat_min[0], flat_max[0], N)
     X = np.linspace(-40, 40, N)
     Y = np.linspace(-40, 40, N)
     X, Y = np.meshgrid(X, Y)
@@ -296,11 +292,13 @@ def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix):
     pos[:, :, 0] = X
     pos[:, :, 1] = Y
 
+    # Iterates through the number of components and calculate the multivariate gaussian and scales it to the component weight
+    # Adds this to the z value that is used for the 3D plot
     Z = 0
-
     for i in range(no_components):
         Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
 
+    # 3D plotting from canvas
     # Create a surface plot and projected filled contour plot under it
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
@@ -332,12 +330,8 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
             N = np.sqrt((2 * np.pi) ** n * sigma_det)
             fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
             total_pdf += w * np.exp(-fac / 2) / N
-        # Added by Zach
-        # total_pdf = total_pdf / K
         log_likelihood += np.log(total_pdf)
 
-    # Added by Zach
-    # log_likelihood = log_likelihood / ext_matrix.shape[0]
     return log_likelihood
 
 # Ashton
@@ -369,7 +363,7 @@ def EM_uwplatt(data_matrix, no_of_components):
         # Plot the GMM contour
         EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
 
-        # Track perforcame of
+        # Track performance of the algorithm
         likelihood = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         dataset_log_likelihood_matrix.append(likelihood)
 
@@ -384,11 +378,10 @@ def main():
     # For dealing with a static dataset for testing
     # generate_static_dataset(num_components, 1000)
     # dataset = read_static_dataset(num_components)
-
-
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 1000), num_components)
-
     # mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(dataset, num_components)
+
+    # Runs the overall EM function
+    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 1000), num_components)
 
     print(iterations)
     print(dataset_log_likelihood_matrix)
@@ -396,6 +389,7 @@ def main():
     x = list(range(len(dataset_log_likelihood_matrix)))
     y = dataset_log_likelihood_matrix
 
+    # Shows the final 3D and contour plot
     EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
     EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
 
