@@ -122,31 +122,19 @@ def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_w
     no_components = component_weights_matrix.size
     no_dim = extended_matrix.shape[COLS] - no_components
 
-    #mean_k = np.sqrt(np.square(mean_matrix[0, 0]) + np.square(mean_matrix[0, 1]))
-    #std_dev_k = np.sqrt(np.square(cov_matrix[0, 0]) + np.square(cov_matrix[(0) + 1, 1]))
-
-    # Create Gaus Component Obj
-    #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
-
-    #pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim-1])
-
+    # Calculating this likelihoods of the first component outside the loop allows for auto 
+    # formatting of lik_samp_GMM by Python, which made dimension matching easier.
+    
+    # Calculate multivariate pdfs of all samples for the 1st component
     pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[0,:], cov_matrix[:no_dim, :])
 
-
-    # Calculate likelihood of the sample in the GMM
+    # Calculate likelihood of the samples in the 1st component
     lik_samp_GMM = component_weights_matrix[0] * pdfs_k
 
-    # Calculate likelihood of observing samples
+    # Calculate likelihood of observing samples for the remaining components
     for j in range(1, no_components):
-        # Calculate the mean std_dev of the k-th component
-        #mean_k = np.sqrt(np.square(mean_matrix[j, 0]) + np.square(mean_matrix[j, 1]))
-        #std_dev_k = np.sqrt(np.square(cov_matrix[j * 2, 0]) + np.square(cov_matrix[(j * 2) + 1, 1]))
-
-        # Create Gaus Component Obj
-        #gaus_comp = norm(loc=mean_k, scale=std_dev_k)
-
-        # print(f"gaus_pdfs: {gaus_comp.pdf(extended_matrix[:, :no_dim-1])}")
-        #pdfs_k = gaus_comp.pdf(extended_matrix[:, :no_dim - 1])
+        
+        # Calculate likelihood of observing samples for the jth component
         pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[j,:], cov_matrix[j*2:(j*2) + 2, :])
 
         # Calculate likelihood of the sample in the GMM
@@ -178,6 +166,8 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
  # Calculate values for updates
     for k in range(0, no_components):
         '''
+        Original Code for calculating covariance matrix (by Brady)
+        
         # Membership weights of k-th component
         membership_weights = extended_matrix[:, no_dim + k]
 
@@ -217,20 +207,50 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
         # Update cov yy for matrix of component k
         cov_matrix_yy = np.sum(cov_num_yy) / sum_membership_weights
         cov_matrix[k*2+1, 1] = np.sum(cov_num_yy) / sum_membership_weights
-
-    print(f"Cov_matrix: {cov_matrix}\n")
-    print(f"component_weights_matrix: {component_weights_matrix})"
-    '''
+        '''
+        
+        # Obtain the membership weights of the k-th component
         membership_weights = extended_matrix[:, no_dim + k]
+
+        # Sum the membership weights
         sum_weights = np.sum(membership_weights)
+
+        # multiply the samples by the membership weights
         weighted_samples = membership_weights.reshape(no_samples, 1) * extended_matrix[:, :no_dim]
+
+        # Update the mean of the k0th component
         mean_matrix[k, :] = np.sum(weighted_samples, axis=0) / sum_weights
 
+        '''
+        I (Brady) used Perplexity's comet browser to troubleshoot this function as I was having
+        difficulties tracking down the issue in calculating the covariance matrix. I evnetually
+        found the error, but Perplexity also provided a much more compact code for calculating the 
+        covariance matrix. I have left the original caclulation code up above as proof of my
+        honest attempt, but I decided to stick with the more efficient AI code. Because it is
+        not my own code, I will explain it's operation in further detail below.
+        
+        The below code represents the same math for updating the covarince matrices, but does so
+        using matrix multiplication of difference matrix (the difference of the x & y components
+        of the samples and the man of the k-th centroid.
+        
+        From here, the difference matrix is multiplied by the membership weights to get a 
+        weigthed difference matrix. The transpose of the weighted difference matrix is then
+        multiplied by the origianl difference matrix, which creates a 2x2 matrix that is in the 
+        form of a covariance matrix. The last step is to divide by the summed membership weights
+        to obtain the final covariance matrix.
+        '''
+        # Create a matrix of differences between the x & y components of the samples and the mans
         diff = extended_matrix[:, :no_dim] - mean_matrix[k]
+
+        # Create a weighted difference matrix
         weighted_diff = diff * membership_weights[:, np.newaxis]
+
+        # Take the dot product of the weighted difference matrix and divide it by the summed
+        # membership weights to optain the new covariance matrix.
         cov_k = np.dot(weighted_diff.T, diff) / sum_weights
 
-        cov_matrix[k*2:(k*2)+2, :] = cov_k  # Assign to stacked format
+        # Update the covariance matrix for the k-th component
+        cov_matrix[k*2:(k*2)+2, :] = cov_k 
 
     return (mean_matrix, cov_matrix, component_weights_matrix)
 
