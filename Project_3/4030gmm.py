@@ -36,6 +36,17 @@ def read_static_dataset(num_of_components):
 # o Cross-validation (C-V) set: 20%
 # o Test set: 20%
 # b. Store both features and labels for each subset.
+def generate_class(label, no_of_clusters, no_of_points_per_cluster  ):
+    dataset = generate_dataset(no_of_clusters, no_of_points_per_cluster)
+
+    dataset = shift_class(dataset)
+
+    labeled_dataset = np.full((no_of_clusters * no_of_points_per_cluster, 3), label)
+
+    labeled_dataset[:, :2] = dataset
+
+    return labeled_dataset
+
 def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
     random_data = np.random.randn(no_of_points_per_cluster, 2)
 
@@ -43,7 +54,7 @@ def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
 
     transformed_data = shift_data(random_data, mu_new, sigma_new, fi)
 
-    plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
+    # plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
     data_matrix = transformed_data
     for i in range(no_of_clusters - 1):
         random_data = np.random.randn(no_of_points_per_cluster, 2)
@@ -51,18 +62,18 @@ def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
 
         transformed_data = shift_data(random_data, mu_new, sigma_new, fi)
 
-        plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
+        # plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
 
         data_matrix = np.concatenate((data_matrix, transformed_data), axis=0)
 
-    plt.show()
+    #plt.show()
 
     return data_matrix
 
 # Zach, from Project 1
 def generate_random_shifts():
-    mu_upper = 20
-    mu_lower = -20
+    mu_upper = 5
+    mu_lower = -5
     mu_new = np.array([rand.randint(mu_lower, mu_upper), rand.randint(mu_lower, mu_upper)])
     sigma_new = np.array([[rand.randrange(1, 4), 0], [0, rand.randrange(1, 4)]])
     fi = math.pi / (rand.randint(1, 4))
@@ -90,6 +101,43 @@ def shift_data(data, mu, sigma, fi):
     shifted_data = Data_new.dot(rotate_matrix.T) + mu
 
     return shifted_data
+
+
+def shift_class(dataset):
+    mu_upper = 40
+    mu_lower = -40
+    mu = np.array([rand.randint(mu_lower, mu_upper), rand.randint(mu_lower, mu_upper)])
+
+    shifted_class = dataset + mu
+
+    return shifted_class
+
+def generate_split_dataset(num_clusters, num_samples, num_classes):
+    class1 = generate_class(0, num_clusters, num_samples)
+
+    class2 = generate_class(1, num_clusters, num_samples)
+
+    plt.scatter(class1[:, 0], class1[:, 1])
+
+    plt.scatter(class2[:, 0], class2[:, 1])
+
+    plt.show()
+
+    merged_dataset = np.concatenate((class1, class2), axis=0)
+
+    num_of_total_samples = num_samples * num_clusters * num_classes
+
+    np.random.shuffle(merged_dataset)
+
+    first_split = round(0.6 * num_of_total_samples)
+    second_split = round(0.8 * num_of_total_samples)
+
+    training_set = merged_dataset[:first_split]
+    cv_set = merged_dataset[first_split:second_split]
+    test_set = merged_dataset[second_split:]
+
+    return training_set, cv_set, test_set
+
 
 # TODO
 
@@ -121,25 +169,33 @@ def EM_uwplatt(data_matrix, no_of_components):
 
 # Titus, Zach, from project 2
 def main():
-    num_components = 4
+    num_clusters = 4
+    num_classes = 2
+    num_samples = 500
     # For dealing with a static dataset for testing
     # generate_static_dataset(num_components, 1000)
     # dataset = read_static_dataset(num_components)
     # mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(dataset, num_components)
 
+    training_set, cv_set, test_set = generate_split_dataset(num_clusters, num_samples, num_classes)
+
+    print(training_set.shape)
+    print(cv_set.shape)
+    print(test_set.shape)
+
     # Runs the overall EM function
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 500), num_components)
+    # mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 500), num_components)
 
-    print(iterations)
-    print(dataset_log_likelihood_matrix)
+    # print(iterations)
+    # print(dataset_log_likelihood_matrix)
 
-    x = list(range(len(dataset_log_likelihood_matrix)))
-    y = dataset_log_likelihood_matrix
+    # x = list(range(len(dataset_log_likelihood_matrix)))
+    # y = dataset_log_likelihood_matrix
 
     # Shows the final 3D and contour plot
-    EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-
+    # EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    '''
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
     plt.plot(x, y, marker="o", linestyle="-", color="black")
@@ -149,6 +205,7 @@ def main():
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+    '''
 
 if __name__ == "__main__":
     main()
