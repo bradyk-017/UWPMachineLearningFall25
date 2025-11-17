@@ -102,6 +102,7 @@ def shift_data(data, mu, sigma, fi):
 
     return shifted_data
 
+
 def shift_class(dataset):
     mu_upper = 40
     mu_lower = -40
@@ -137,6 +138,77 @@ def generate_split_dataset(num_clusters, num_samples, num_classes):
 
     return training_set, cv_set, test_set
 
+# TO-DO
+# Check that rework of expectation & maximization to iterate over each GMM works
+# Verify that rework of indexing for multi-gmm data structures works
+# Brady
+def EM_uwplatt_expectation(extended_matrix, mean_matrix, cov_matrix, component_weights_matrix):
+    ROWS = 0
+    COLS = 1
+
+    no_samples = extended_matrix.shape[ROWS]
+    no_components = component_weights_matrix.shape[COLS]
+    no_dim = cov_matrix.shape[COLS]
+    no_GMMS = mean_matrix.shape[ROWS]
+
+    # Iterate Over Each GMM
+    for m in range(0, no_GMMS)
+        # Calculate pdfs
+        pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[m, :no_dim], cov_matrix[:no_dim, :no_dim])
+    
+        # Calculate likelihood of the sample in the GMM
+        lik_samp_GMM = component_weights_matrix[0] * pdfs_k
+    
+        # Calculate likelihood of observing samples
+        for k in range(1, no_components):
+            # Calculate pdfs for the kth component of the mth GMM
+            pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[m, (no_dim*k):no_dim*(k+1)], 
+                                           cov_matrix[k*no_dim:(k*no_dim)+no_dim, m*no_dim:(m*no_dim)+no_dim])
+    
+            # Calculate likelihood of the sample in the GMM
+            lik_samp_GMM += component_weights_matrix[no_dim + k + (m * (no_components - 1))] * pdfs_k
+    
+        for k in range(0, no_components):
+            # Create Gaus Component Obj
+            pdfs_k = multivariate_gaussian(extended_matrix[:, :no_dim], mean_matrix[m, (no_dim*k):no_dim*(k+1)], 
+                                           cov_matrix[k*no_dim:(k*no_dim)+no_dim, m*no_dim:(m*no_dim)+no_dim]])
+    
+            # Calculate the likelihoods that the samples come from the k-th component for N-th model
+            lik_samp_k = component_weights_matrix[no_dim + k + (m * (no_components - 1))] * pdfs_k
+    
+            # Calculate & membership weights
+            extended_matrix[:, no_dim + k + (m * (no_components - 1))] = np.divide(lik_samp_k, lik_samp_GMM).reshape(no_samples,1)
+
+    return (extended_matrix)
+
+# Brady
+def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_weights_matrix):
+    ROWS = 0
+    COLS = 1
+
+    no_samples = extended_matrix.shape[ROWS]
+    no_components = component_weights_matrix.shape[COLS]
+    no_dim = cov_matrix.shape[COLS]
+    no_GMMS = mean_matrix.shape[ROWS]
+
+    # Iterate over each GMM
+    for m in range(0, no_GMMS)
+        # Iterate over each component of the GMM
+        for k in range(0, no_components):
+            # Calculate values for updates
+            membership_weights = extended_matrix[:, no_dim + k + (m * (no_components - 1))]
+            sum_weights = np.sum(membership_weights)
+            weighted_samples = membership_weights.reshape(no_samples, 1) * extended_matrix[:, :no_dim]
+            mean_matrix[m, (no_dim * k):no_dim * (k+1)] = np.sum(weighted_samples, axis=0) / sum_weights
+    
+            diff = extended_matrix[:, :no_dim] - mean_matrix[m, (no_dim * k):no_dim * (k+1)]
+            weighted_diff = diff * membership_weights[:, np.newaxis]
+            cov_k = np.dot(weighted_diff.T, diff) / sum_weights
+    
+            cov_matrix[k*no_dim:(k*no_dim)+no_dim, m*no_dim:(m*no_dim)+no_dim] = cov_k  # Assign to stacked format
+
+    return (mean_matrix, cov_matrix, component_weights_matrix)
+
 # From Canvas
 def multivariate_gaussian(pos, mu, Sigma):
     """Return the multivariate Gaussian distribution on array pos.
@@ -154,13 +226,15 @@ def multivariate_gaussian(pos, mu, Sigma):
     fac = np.einsum('...k,kl,...l->...', pos-mu, Sigma_inv, pos-mu)
     return np.exp(-fac / 2) / N
 
-# Plotting Functions
 # Zach
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     no_components = cw_matrix.size
 
+    flat_max = np.max(mean_matrix, axis=0)
+    flat_min = np.min(mean_matrix, axis=0)
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
+    # X = np.linspace(flat_min[0], flat_max[0], N)
     X = np.linspace(-30, 30, N)
     Y = np.linspace(-30, 30, N)
     X, Y = np.meshgrid(X, Y)
@@ -170,123 +244,17 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix):
     pos[:, :, 0] = X
     pos[:, :, 1] = Y
 
-    # Iterates through the number of components and calculate the multivariate gaussian and scales it to the component weight
-    # Adds this to the z value that is used for the contour plot
     Z = 0
+
     for i in range(no_components):
         Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
 
-    # Adds the information to the contour plot and shows the plot
     plt.contourf(X, Y, Z)
     plt.show()
 
     return None  # Produces a contour plot
 
-def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix):
-    no_components = cw_matrix.size
-
-    # Our 2-dimensional distribution will be over variables X and Y
-    N = 60  # Number of ticks on X, Y axes
-    X = np.linspace(-40, 40, N)
-    Y = np.linspace(-40, 40, N)
-    X, Y = np.meshgrid(X, Y)
-
-    # Pack X and Y into a single 3-dimensional array
-    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
-    pos[:, :, 0] = X
-    pos[:, :, 1] = Y
-
-    # Iterates through the number of components and calculate the multivariate gaussian and scales it to the component weight
-    # Adds this to the z value that is used for the 3D plot
-    Z = 0
-    for i in range(no_components):
-        Z += cw_matrix[i] * multivariate_gaussian(pos, mean_matrix[i], cov_matrix[i*2:i*2+2, :])
-
-    # 3D plotting from canvas
-    # Create a surface plot and projected filled contour plot under it
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.plot_surface(X, Y, Z, rstride=3, cstride=3, linewidth=1, antialiased=True, cmap=cm.viridis)
-    # Adjust the limits, ticks and view angle
-    ax.set_zlim(0, 0.02)
-    ax.set_zticks(np.linspace(0, 0.02, 5))
-    ax.view_init(27, -21)
-    plt.show()
-
-    return None
-
-# Ashton, Zach
-def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
-    log_likelihood = 0
-    K = len(cw_matrix)
-    n = mean_matrix[0].shape[0]
-
-    # data set log likeliness loop
-    for i in range(ext_matrix.shape[0]):
-        x_i = ext_matrix[i, :n]
-        total_pdf = 0
-        # PDF calculation loop
-        for k in range(K):
-            mu = mean_matrix[k]
-            sigma = cov_matrix[k * 2: k * 2 + 2, :]
-            w = cw_matrix[k]
-
-            sigma_det = np.linalg.det(sigma)
-            sigma_inv = np.linalg.inv(sigma)
-            N = np.sqrt((2 * np.pi) ** n * sigma_det)
-            fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
-            total_pdf += w * np.exp(-fac / 2) / N
-        log_likelihood += np.log(total_pdf)
-
-    return log_likelihood
-
-# Ashton
-def EM_uwplatt_test_convergence(log_likelihoods, iterations):
-    # 1e-4 is supposedly the standard threshold for relative thresholding
-    threshold = 1e-4
-    if iterations < 1:
-        return False
-    previous = log_likelihoods[iterations - 1]
-    current = log_likelihoods[iterations]
-    # 1e-12 is added to prevent division by 0
-    change = abs(current - previous) / (abs(previous) + 1e-12)
-    return change < threshold
-
 # TODO
-
-# Zach
-def EM_uwplatt_init(data_matrix, no_of_components):
-    # Calculates both the x_mean and the y_mean of the global data_matrix
-    means = np.mean(data_matrix, axis=0)
-    x_mean = means[0]
-    y_mean = means[1]
-
-    # Creates an array with size of no_of_component rows and 2 columns and then fill it with radnomly offset x_mean and y_mean
-    mean_matrix = np.zeros((no_of_components, 2))
-    for i in range(no_of_components):
-        x_mu, y_mu = generate_random_xy_shift()
-        mean_matrix[i][0] = x_mean + x_mu
-        mean_matrix[i][1] = y_mean + y_mu
-
-    # Creates a matrix of no_of_component columns filled with 1 / no_of_components
-    # Initializing component weights
-    component_weights_matrix = np.full(no_of_components, (1 / no_of_components))
-
-    # Calculates the global covariance matrix and saves it to cov_matrix
-    glob_cov = np.cov(data_matrix, rowvar=False)
-    cov_matrix = glob_cov
-
-    # Creates a matrix of no_of_component global covariance matrices stacked
-    for _ in range(no_of_components - 1):
-        cov_matrix = np.concatenate((cov_matrix, glob_cov), axis=0)
-
-    # Creates the extented matrix of no of sample rows and 2 + no_of_component columns
-    n_samples, no_dim = data_matrix.shape
-    ext_matrix = np.zeros((n_samples, no_dim + no_of_components))
-    ext_matrix[:, :no_dim] = data_matrix
-
-    return (ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-
 
 # Titus, from project 2
 def EM_uwplatt(data_matrix, no_of_components):
@@ -296,6 +264,8 @@ def EM_uwplatt(data_matrix, no_of_components):
 
     dataset_log_likelihood_matrix = []
     iterations = 0
+    print(ext_matrix, mean_matrix, cov_matrix)
+    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
 
     while not has_completed:
         # Re-calculate extended matrix and update others
@@ -312,7 +282,7 @@ def EM_uwplatt(data_matrix, no_of_components):
         # Test the convergence to determine whether we should stop early
         has_completed = EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations)
         iterations += 1
-    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations
+
 
 # Titus, Zach, from project 2
 def main():
@@ -331,7 +301,7 @@ def main():
     print(test_set.shape)
 
     # Runs the overall EM function
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(training_set, num_clusters * num_classes)
+    # mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_matrix, iterations = EM_uwplatt(generate_dataset(num_components, 500), num_components)
 
     # print(iterations)
     # print(dataset_log_likelihood_matrix)
@@ -340,8 +310,8 @@ def main():
     # y = dataset_log_likelihood_matrix
 
     # Shows the final 3D and contour plot
-    EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    # EM_uwplatt_3D_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
     '''
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
