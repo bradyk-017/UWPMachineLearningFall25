@@ -210,15 +210,17 @@ def EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weight
 
     no_samples = ext_matrix.shape[ROWS]
     no_components = component_weights_matrix.shape[COLS]
-    no_GMMS = mean_matrix.shape[ROWS]
-    no_dim = cov_matrix.shape[COLS] // no_GMMS
+    no_GMMs = mean_matrix.shape[ROWS]
+    no_dim = cov_matrix.shape[COLS] // no_GMMs
 
     # Iterate Over Each GMM
-    for m in range(0, no_GMMS):
+    for m in range(0, no_GMMs):
         # Calculate pdfs
-        print(f"cov_matrix of GMM {m}: \n")
-        for row in cov_matrix:
-            print(' '.join(map(str, row)))
+        
+        # Testing print(f"cov_matrix of GMM {m}: \n")
+        # for row in cov_matrix:
+        #    print(' '.join(map(str, row)))
+        
         ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == m), :]
         pdfs_k = multivariate_gaussian(ext_matrix_m[:, :no_dim], 
                                        mean_matrix[m, :no_dim], cov_matrix[0:no_dim, m*no_dim:(m*no_dim)+no_dim])
@@ -255,11 +257,11 @@ def EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weigh
 
     no_samples = ext_matrix.shape[ROWS]
     no_components = component_weights_matrix.shape[COLS]
-    no_GMMS = mean_matrix.shape[ROWS]
-    no_dim = cov_matrix.shape[COLS] // no_GMMS
+    no_GMMs = mean_matrix.shape[ROWS]
+    no_dim = cov_matrix.shape[COLS] // no_GMMs
 
     # Iterate over each GMM
-    for m in range(0, no_GMMS):
+    for m in range(0, no_GMMs):
         ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == m), :]
         # Iterate over each component of the GMM
         for k in range(0, no_components):
@@ -278,48 +280,61 @@ def EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weigh
     return (mean_matrix, cov_matrix, component_weights_matrix)
 
 
-# Ashton, Zach
+# Ashton, Zach, Brady
 def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
-    log_likelihood = 0
-    no_components = cw_matrix.size
-    no_GMMS = cw_matrix.shape[0]
-    no_clusters = no_components // no_GMMS
-    no_dim = 2
-    n = mean_matrix[0].shape[0]
+ 
+    ROWS = 0
+    COLS = 1
 
-    # data set log likeliness loop
-    for i in range(ext_matrix.shape[0]):
-        x_i = ext_matrix[i, :n]
-        total_pdf = 0
-        # PDF calculation loop
-        for k in range(no_clusters):
-            '''
-            mu = mean_matrix[k]
-            sigma = cov_matrix[k * 2:k * 2 + 2, k * 2:k *2 + 2]
-            w = cw_matrix[k]
+    no_components = cw_matrix.shape[COLS]
+    no_GMMs = mean_matrix.shape[ROWS]
+    no_dim = cov_matrix.shape[COLS] // no_GMMs
 
-            sigma_det = np.linalg.det(sigma)
-            sigma_inv = np.linalg.inv(sigma)
-            N = np.sqrt((2 * np.pi) ** n * sigma_det)
-            fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
-            '''
-            total_pdf += cw_matrix[0, k] * multivariate_gaussian(ext_matrix[i, :no_dim], mean_matrix[0, (no_dim*k):no_dim*(k+1)], cov_matrix[k*no_dim:(k+1)*no_dim, 0:2])
-        log_likelihood += np.log(total_pdf)
+    log_likelihood_1 = 0;
+    log_likelihood_2 = 0;
 
-    return log_likelihood
+    for m in range(0, no_GMMs):
+        # Get samples belonging to current GMM
+        ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == m), :]
+        
+        # data set log likeliness loop
+        for i in range(ext_matrix_m.shape[ROWS]):
+            x_i = ext_matrix_m[i, :no_dim]
+            total_pdf = 0
+            # PDF calculation loop
+            for k in range(0, no_components):
+                '''
+                mu = mean_matrix[k]
+                sigma = cov_matrix[k * 2:k * 2 + 2, k * 2:k *2 + 2]
+                w = cw_matrix[k]
+    
+                sigma_det = np.linalg.det(sigma)
+                sigma_inv = np.linalg.inv(sigma)
+                N = np.sqrt((2 * np.pi) ** no_dim * sigma_det)
+                fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
+                '''
+                total_pdf += cw_matrix[m, k] * multivariate_gaussian(ext_matrix_m[:, :no_dim], mean_matrix[m, (no_dim*k):no_dim*(k+1)], 
+                                      cov_matrix[k*no_dim:(k*no_dim)+no_dim, m*no_dim:(m*no_dim)+no_dim])
+
+                if(m == 0):
+                    log_likelihood_1 += np.log(total_pdf).sum()
+                else:
+                    log_likelihood_2 += np.log(total_pdf).sum()
+        
+        del ext_matrix_m
+
+    return log_likelihood_1, log_likelihood_2
 
 #ashton
 
-def sample_log_likelihood(x, mean_matrix, cov_matrix, cw_matrix):
-    K = cw_matrix.size
-    D = 2
-    no_dim = 2
+def sample_log_likelihood(x, mean_matrix, cov_matrices, cw_matrix):
+    K = mean_matrix.shape[0]
+    D = mean_matrix.shape[1]
 
     total_pdf = 0
     for k in range(K):
-
-        mu = mean_matrix[k*2:k*2 + 2]
-        sigma = cov_matrix[k*2:k*2 + 2, :]
+        mu = mean_matrix[k]
+        sigma = cov_matrices[k]
         w = cw_matrix[k]
 
         sigma_det = np.linalg.det(sigma)
@@ -327,12 +342,8 @@ def sample_log_likelihood(x, mean_matrix, cov_matrix, cw_matrix):
         N = np.sqrt((2 * np.pi) ** D * sigma_det)
         fac = np.einsum('k,kl,l->', x - mu, sigma_inv, x - mu)
         pdf_val = np.exp(-fac / 2) / N
-        
         total_pdf += w * pdf_val
-
-        # total_pdf += cw_matrix[0, k] * multivariate_gaussian(x, mean_matrix[0, (no_dim * k):no_dim * (k + 1)], cov_matrix[k * no_dim:(k + 1) * no_dim, 0:2])
-
-    # total_pdf = max(total_pdf)
+    total_pdf = max(total_pdf)
     return np.log(total_pdf)
 
 
@@ -361,16 +372,8 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
 
     return confusion_matrix, accuracy
 
-
-def EM_uwplatt_test_convergence(log_likelihoods, iteration):
-    min_iterations = 10
-    threshold = 1e-4
-
-    if iteration < min_iterations:
-        return False
-
-    diff = log_likelihoods[-1] - log_likelihoods[-2]
-    if diff < threshold:
+def EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations):
+    if iterations > 10:
         return True
     else:
         return False
@@ -399,8 +402,10 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     no_GMMS = cw_matrix.shape[0]
     no_clusters = no_components // no_GMMS
     no_dim = 2
-    print(cw_matrix.shape)
-    print(no_clusters)
+
+    # Testing
+    #print(cw_matrix.shape)
+    #print(no_clusters)
 
 
     # Our 2-dimensional distribution will be over variables X and Y
@@ -506,50 +511,48 @@ def det_curve(test_set, gmm0, gmm1):
 
 
 # Titus, from project 2, Edits from Brady
-def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
+def EM_uwplatt(data_matrix, no_of_components):
     completed_1 = False
     completed_2 = False
-    completed_cv = False
 
     ext_matrix, mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_init(data_matrix, no_of_components)
 
     dataset_log_likelihood_1 = []
     dataset_log_likelihood_2 = []
-    dataset_log_likelihood_cv = []
     its_1 = 0
     its_2 = 0
     #print(ext_matrix, mean_matrix, cov_matrix)
 
-    while not completed_1 or not completed_2 or not completed_cv:
+    while not completed_1 or not completed_2:
         # Re-calculate extended matrix and upaate others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
     
         # Plot the GMM contour
         EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 0)
-        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 1)
+
+        likelihood1, likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
+
+        print(f"likelihood1: {likelihood1} \nlikelihood2: {likelihood2}\n")
+
         # If GMM1 has not converged
-        if not completed_1:
+        if(not completed_1):
             # Track performance of GMM1
-            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
             dataset_log_likelihood_1.append(likelihood1)
     
             # Test the convergence to determine whether we should stop GMM1
             completed_1 = EM_uwplatt_test_convergence(dataset_log_likelihood_1, its_1)
             its_1 += 1
+            print(f"iterations 1: {its_1}")
         
-        if not completed_2:
+        if(not completed_2):
             # Track performance of GMM2
-            likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
             dataset_log_likelihood_2.append(likelihood2)
     
             # Test the convergence to determine whether we should stop GMM2
             completed_2 = EM_uwplatt_test_convergence(dataset_log_likelihood_2, its_2)
             its_2 += 1
-        if not completed_cv:
-            likelihood_cv = EM_uwplatt_dataset_log_likelihood(cv_matrix, mean_matrix, cov_matrix, component_weights_matrix)
-            dataset_log_likelihood_cv.append(likelihood_cv)
-            completed_cv = EM_uwplatt_test_convergence(dataset_log_likelihood_cv, its_1)
+            print(f"iterations 2: {its_2}")
 
     return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its_1, its_2
 
@@ -567,24 +570,15 @@ def main():
     training_set, cv_set, test_set = generate_split_dataset(num_clusters, num_samples, num_classes)
 
     # Runs the overall EM function
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_loglikelihood_2, its1, its2 = EM_uwplatt(training_set, num_clusters * num_classes, cv_set)
+    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its1, its2 = EM_uwplatt(training_set, num_clusters * num_classes)
     print(mean_matrix.shape)
     print(cov_matrix.shape)
 
-    # mean0, cov0, w0 = gmm0
-    # mean1, cov1, w1 = gmm1
-    mean0 = mean_matrix[0, :]
-    mean1 = mean_matrix[1, :]
+    print(its1)
+    print(dataset_log_likelihood_1)
 
-    cov0 = cov_matrix[:, 0:2]
-    cov1 = cov_matrix[:, 2:4]
-
-    w0 = component_weights_matrix[0, :]
-    w1 = component_weights_matrix[1, :]
-
-
-    gmm0 = (mean0, cov0, w0)
-    gmm1 = (mean1, cov1, w1)
+    x1 = list(range(len(dataset_log_likelihood_1)))
+    y1 = dataset_log_likelihood_1
 
     det_curve(test_set, gmm0, gmm1)
 
@@ -596,17 +590,26 @@ def main():
 
     # Shows the final 3D and contour plot
     # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    '''
+    
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
-    plt.plot(x, y, marker="o", linestyle="-", color="black")
-    plt.xlabel("Iterations")
-    plt.ylabel("Log-Likelihood")
-    plt.title("EM Convergence: Log-Likelihood Trend")
+    plt.plot(x1, y1, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations for GMM 1")
+    plt.ylabel("Log-Likelihood for GMM 1")
+    plt.title("EM Convergence for GMM 1: Log-Likelihood Trend")
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-    '''
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x2, y2, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations for GMM 2")
+    plt.ylabel("Log-Likelihood for GMM 2")
+    plt.title("EM Convergence for GMM 2: Log-Likelihood Trend")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+    
 
 if __name__ == "__main__":
     main()
