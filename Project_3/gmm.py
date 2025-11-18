@@ -109,8 +109,8 @@ def shift_data(data, mu, sigma, fi):
 
 
 def shift_class(dataset):
-    mu_upper = 5
-    mu_lower = -5
+    mu_upper = 40
+    mu_lower = -40
     mu = np.array([rand.randint(mu_lower, mu_upper), rand.randint(mu_lower, mu_upper)])
 
     shifted_class = dataset + mu
@@ -223,9 +223,9 @@ def EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weight
     # Iterate Over Each GMM
     for m in range(0, no_GMMS):
         # Calculate pdfs
-        print(f"cov_matrix of GMM {m}: \n")
-        for row in cov_matrix:
-            print(' '.join(map(str, row)))
+        # print(f"cov_matrix of GMM {m}: \n")
+        # for row in cov_matrix:
+        #    print(' '.join(map(str, row)))
         ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == m), :]
         pdfs_k = multivariate_gaussian(ext_matrix_m[:, :no_dim],
                                        mean_matrix[m, :no_dim], cov_matrix[0:no_dim, m * no_dim:(m * no_dim) + no_dim])
@@ -290,21 +290,22 @@ def EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix, component_weigh
     return (mean_matrix, cov_matrix, component_weights_matrix)
 
 
-# Ashton, Zach
-def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_matrix):
-    log_likelihood = 0
+# Ashton, Zach, Brady
+def EM_uwplatt_dataset_log_likelihood(ext_matrix_m, mean_matrix, cov_matrix, cw_matrix):
+ 
+    ROWS = 0
+    COLS = 1
     no_components = cw_matrix.size
-    no_GMMS = cw_matrix.shape[0]
-    no_clusters = no_components // no_GMMS
-    no_dim = 2
-    n = mean_matrix[0].shape[0]
-
+    no_GMMs = mean_matrix.size
+    no_dim = cov_matrix.shape[COLS]
+    log_likelihood = 0;
+    
     # data set log likeliness loop
-    for i in range(ext_matrix.shape[0]):
-        x_i = ext_matrix[i, :n]
+    for i in range(ext_matrix_m.shape[ROWS]):
+        x_i = ext_matrix_m[i, :no_dim]
         total_pdf = 0
         # PDF calculation loop
-        for k in range(no_clusters):
+        for k in range(0, no_components):
             '''
             mu = mean_matrix[k]
             sigma = cov_matrix[k * 2:k * 2 + 2, k * 2:k *2 + 2]
@@ -312,14 +313,14 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
 
             sigma_det = np.linalg.det(sigma)
             sigma_inv = np.linalg.inv(sigma)
-            N = np.sqrt((2 * np.pi) ** n * sigma_det)
+            N = np.sqrt((2 * np.pi) ** no_dim * sigma_det)
             fac = np.einsum('k,kl,l->', x_i - mu, sigma_inv, x_i - mu)
             '''
-            total_pdf += cw_matrix[0, k] * multivariate_gaussian(ext_matrix[i, :no_dim],
-                                                                 mean_matrix[0, (no_dim * k):no_dim * (k + 1)],
-                                                                 cov_matrix[k * no_dim:(k + 1) * no_dim, 0:2])
-        log_likelihood += np.log(total_pdf)
-
+            total_pdf += cw_matrix[k] * multivariate_gaussian(ext_matrix_m[:, :no_dim], mean_matrix[(no_dim*k):no_dim*(k+1)], 
+                                  cov_matrix[k*no_dim:(k*no_dim)+no_dim])
+            
+            log_likelihood += np.log(total_pdf).sum()
+        
     return log_likelihood
 
 
@@ -364,6 +365,10 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
         Lambda = ll1 - ll0
         y_pred.append(1 if Lambda > threshold else 0)
     y_pred = np.array(y_pred)
+
+    return y_pred
+
+def calc_confusion_and_accurracy(y_pred)
     # Confusion matrix new
     true_pos = np.sum((y_pred == 1) & (y_true == 1))
     true_neg = np.sum((y_pred == 0) & (y_true == 0))
@@ -379,11 +384,14 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
 def EM_uwplatt_test_convergence(log_likelihoods, iteration):
     min_iterations = 10
     threshold = 1e-4
+    end = len(log_likelihoods) - 1
 
-    if iteration < min_iterations:
-        return False
+    #print(f" end: {log_likelihoods[end]}\nend1: {log_likelihoods[end-1]}")
 
-    diff = log_likelihoods[-1] - log_likelihoods[-2]
+    #if iteration < min_iterations:
+        #return False
+
+    diff = log_likelihoods[end] - log_likelihoods[end - 1]
     if diff < threshold:
         return True
     else:
@@ -484,17 +492,17 @@ def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix, label):
 # Ashton
 def det_curve(test_set, gmm0, gmm1):
     num_of_points = 50
-    # y_true = test_set[:, -1].astype(int)
-    points = test_set[:, :-1]
-    # y_pred = []
+    y_true = test_set[:, -1].astype(int)
+    X = test_set[:, :-1]
+    y_pred = []
 
     mean0, cov0, w0 = gmm0
     mean1, cov1, w1 = gmm1
 
     lambdas = []
-    for point in points:
-        ll0 = sample_log_likelihood(point, mean0, cov0, w0)
-        ll1 = sample_log_likelihood(point, mean1, cov1, w1)
+    for x in X:
+        ll0 = sample_log_likelihood(x, mean0, cov0, w0)
+        ll1 = sample_log_likelihood(x, mean1, cov1, w1)
         lambdas.append(ll1 - ll0)
     lambdas = np.array(lambdas)
 
@@ -504,7 +512,8 @@ def det_curve(test_set, gmm0, gmm1):
     FRRs = []
 
     for thresh in thresholds:
-        cm, _ = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
+        y_pred = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
+        cm, _ = calc_confusion_and_accurracy(y_pred)
         TP, FN = cm[0]
         FP, TN = cm[1]
         FAR = FP / (FP + TN)
@@ -524,6 +533,7 @@ def det_curve(test_set, gmm0, gmm1):
     plt.grid(True, which="both", ls="--")
     plt.show()
 
+
 # Titus, from project 2, Edits from Brady
 def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
     completed_1 = False
@@ -534,7 +544,8 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
 
     dataset_log_likelihood_1 = []
     dataset_log_likelihood_2 = []
-    dataset_log_likelihood_cv = []
+    dataset_log_likelihood_cv1 = []
+    dataset_log_likelihood_cv2 = []
     its_1 = 0
     its_2 = 0
     # print(ext_matrix, mean_matrix, cov_matrix)
@@ -546,33 +557,30 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
                                                                                     component_weights_matrix)
 
         # Plot the GMM contour
-        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 0)
-        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 1)
+        #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 0)
+        #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 1)
         # If GMM1 has not converged
         if not completed_1:
             # Track performance of GMM1
-            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix,
-                                                            component_weights_matrix)
+            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == 0), :], 
+                                                            mean_matrix[0], cov_matrix[:, 0:no_dim], component_weights_matrix[0])
+            
             dataset_log_likelihood_1.append(likelihood1)
 
             # Test the convergence to determine whether we should stop GMM1
-            completed_1 = EM_uwplatt_test_convergence(dataset_log_likelihood_1, its_1)
+            #completed_1 = EM_uwplatt_test_convergence(dataset_log_likelihood_1, its_1)
             its_1 += 1
 
         if not completed_2:
             # Track performance of GMM2
-            likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix,
-                                                            component_weights_matrix)
+            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == 0), :], 
+                                                            mean_matrix[1], cov_matrix[:, 1:no_dim], component_weights_matrix[1])
+            
             dataset_log_likelihood_2.append(likelihood2)
 
             # Test the convergence to determine whether we should stop GMM2
-            completed_2 = EM_uwplatt_test_convergence(dataset_log_likelihood_2, its_2)
+            #completed_2 = EM_uwplatt_test_convergence(dataset_log_likelihood_2, its_2)
             its_2 += 1
-        if not completed_cv:
-            likelihood_cv = EM_uwplatt_dataset_log_likelihood(cv_matrix, mean_matrix, cov_matrix,
-                                                              component_weights_matrix)
-            dataset_log_likelihood_cv.append(likelihood_cv)
-            completed_cv = EM_uwplatt_test_convergence(dataset_log_likelihood_cv, its_1)
 
     return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its_1, its_2
 
@@ -611,25 +619,38 @@ def main():
 
     det_curve(test_set, gmm0, gmm1)
 
-    # print(iterations)
-    # print(dataset_log_likelihood_matrix)
+    print(its1)
+    print(dataset_log_likelihood_1)
+    x1 = list(range(len(dataset_log_likelihood_1)))
+    y1 = dataset_log_likelihood_1
 
-    # x = list(range(len(dataset_log_likelihood_matrix)))
-    # y = dataset_log_likelihood_matrix
+    print(its2)
+    print(dataset_log_likelihood_2)
+
+    x2 = list(range(len(dataset_log_likelihood_2)))
+    y2 = dataset_log_likelihood_2
 
     # Shows the final 3D and contour plot
     # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    '''
+    
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
-    plt.plot(x, y, marker="o", linestyle="-", color="black")
-    plt.xlabel("Iterations")
-    plt.ylabel("Log-Likelihood")
-    plt.title("EM Convergence: Log-Likelihood Trend")
+    plt.plot(x1, y1, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations for GMM 1")
+    plt.ylabel("Log-Likelihood for GMM 1")
+    plt.title("EM Convergence for GMM 1: Log-Likelihood Trend")
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-    '''
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x2, y2, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations for GMM 2")
+    plt.ylabel("Log-Likelihood for GMM 2")
+    plt.title("EM Convergence for GMM 2: Log-Likelihood Trend")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
