@@ -308,6 +308,53 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix, mean_matrix, cov_matrix, cw_ma
 
     return log_likelihood
 
+#ashton
+
+def sample_log_likelihood(x, mean_matrix, cov_matrices, cw_matrix):
+    K = mean_matrix.shape[0]
+    D = mean_matrix.shape[1]
+
+    total_pdf = 0
+    for k in range(K):
+        mu = mean_matrix[k]
+        sigma = cov_matrices[k]
+        w = cw_matrix[k]
+
+        sigma_det = np.linalg.det(sigma)
+        sigma_inv = np.linalg.inv(sigma)
+        N = np.sqrt((2 * np.pi) ** D * sigma_det)
+        fac = np.einsum('k,kl,l->', x - mu, sigma_inv, x - mu)
+        pdf_val = np.exp(-fac / 2) / N
+        total_pdf += w * pdf_val
+    total_pdf = max(total_pdf)
+    return np.log(total_pdf)
+
+
+def classify_with_likelihood_ratio(test_set, gmm0, gmm1):
+    threshold = 0
+    mean0, cov0, w0 = gmm0
+    mean1, cov1, w1 = gmm1
+
+    y_true = test_set[:, -1].astype(int)
+    X = test_set[:, :-1]
+    y_pred = []
+
+    for x in X:
+        ll0 = sample_log_likelihood(x, mean0, cov0, w0)
+        ll1 = sample_log_likelihood(x, mean1, cov1, w1)
+        Lambda = ll1 - ll0
+        y_pred.append(1 if Lambda > threshold else 0)
+    y_pred = np.array(y_pred)
+    # Confusion matrix new
+    true_pos = np.sum((y_pred == 1) & (y_true == 1))
+    true_neg = np.sum((y_pred == 0) & (y_true == 0))
+    false_pos = np.sum((y_pred == 1) & (y_true == 0))
+    false_neg = np.sum((y_pred == 0) & (y_true == 1))
+
+    confusion_matrix = np.array([[true_pos, false_neg],[false_pos, true_neg]])
+    accuracy = (true_pos + true_neg) / (true_pos + true_neg + false_pos + false_neg)
+
+    return confusion_matrix, accuracy
 
 def EM_uwplatt_test_convergence(dataset_log_likelihood_matrix, iterations):
     if iterations > 10:
