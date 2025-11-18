@@ -366,9 +366,9 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
         y_pred.append(1 if Lambda > threshold else 0)
     y_pred = np.array(y_pred)
 
-    return y_pred
+    return y_pred, y_true
 
-def calc_confusion_and_accurracy(y_pred):
+def calc_confusion_and_accurracy(y_pred, y_true):
     # Confusion matrix new
     true_pos = np.sum((y_pred == 1) & (y_true == 1))
     true_neg = np.sum((y_pred == 0) & (y_true == 0))
@@ -397,6 +397,19 @@ def EM_uwplatt_test_convergence(log_likelihoods, iteration):
     else:
         return False
 
+def EM_test_accuracy_plateau(accuracy):
+    if len(accuracy) < 2:
+        return False
+    else:
+        threshold = 0.0001
+        previous = accuracy[-2]
+        current = accuracy[-1]
+    
+        diff = current - previous
+        if diff < threshold:
+            return True
+        else:
+            return False
 
 # From Canvas
 def multivariate_gaussian(pos, mu, Sigma):
@@ -419,12 +432,12 @@ def multivariate_gaussian(pos, mu, Sigma):
 # Zach
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     no_components = cw_matrix.size
-    print("Components", no_components)
+    #print("Components", no_components)
     no_GMMS = cw_matrix.shape[0]
     no_clusters = no_components // no_GMMS
     no_dim = 2
-    print(cw_matrix.shape)
-    print(no_clusters)
+    #print(cw_matrix.shape)
+    #print(no_clusters)
 
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
@@ -512,8 +525,8 @@ def det_curve(test_set, gmm0, gmm1):
     FRRs = []
 
     for thresh in thresholds:
-        y_pred = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
-        cm, _ = calc_confusion_and_accurracy(y_pred)
+        y_pred, y_true = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
+        cm, _ = calc_confusion_and_accurracy(y_pred, y_true)
         TP, FN = cm[0]
         FP, TN = cm[1]
         FAR = FP / (FP + TN)
@@ -544,46 +557,60 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
 
     dataset_log_likelihood_1 = []
     dataset_log_likelihood_2 = []
-    dataset_log_likelihood_cv1 = []
-    dataset_log_likelihood_cv2 = []
-    its_1 = 0
-    its_2 = 0
+    accuracy_cv = []
+    accuracy_train = []
+    its = 0
     no_dim = 2
     # print(ext_matrix, mean_matrix, cov_matrix)
 
-    while not completed_1 or not completed_2 or not completed_cv:
+    while not completed_1:
         # Re-calculate extended matrix and upaate others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix,
                                                                                     component_weights_matrix)
 
         # Plot the GMM contour
-        #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 0)
-        #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 1)
-        # If GMM1 has not converged
-        if not completed_1:
-            # Track performance of GMM1
-            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
-                                                            mean_matrix[0], cov_matrix[:, 0:no_dim], component_weights_matrix[0])
-            
-            dataset_log_likelihood_1.append(likelihood1)
+        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 0)
+        EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix, 1)
+        
+        # Track performance of GMM1
+        likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
+                                                        mean_matrix[0], cov_matrix[:, 0:no_dim], component_weights_matrix[0])
+    
+        dataset_log_likelihood_1.append(likelihood1)
 
-            # Test the convergence to determine whether we should stop GMM1
-            #completed_1 = EM_uwplatt_test_convergence(dataset_log_likelihood_1, its_1)
-            its_1 += 1
+    
+        # Track performance of GMM2
+        likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
+                                                        mean_matrix[1], cov_matrix[:, no_dim:], component_weights_matrix[1])
+        
+        dataset_log_likelihood_2.append(likelihood2)
 
-        if not completed_2:
-            # Track performance of GMM2
-            likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
-                                                            mean_matrix[1], cov_matrix[:, no_dim:], component_weights_matrix[1])
-            
-            dataset_log_likelihood_2.append(likelihood2)
+        its += 1
 
-            # Test the convergence to determine whether we should stop GMM2
-            #completed_2 = EM_uwplatt_test_convergence(dataset_log_likelihood_2, its_2)
-            its_2 += 1
+        mean0 = mean_matrix[0, :]
+        mean1 = mean_matrix[1, :]
+    
+        cov0 = cov_matrix[:, 0:2]
+        cov1 = cov_matrix[:, 2:4]
+    
+        w0 = component_weights_matrix[0, :]
+        w1 = component_weights_matrix[1, :]
+    
+        gmm0 = (mean0, cov0, w0)
+        gmm1 = (mean1, cov1, w1)
 
-    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its_1, its_2
+        y_pred_train, y_true_train = classify_with_likelihood_ratio(np.delete(ext_matrix, slice(no_dim, -1), axis=1), gmm0, gmm1, 0)
+        _, acc_train = calc_confusion_and_accurracy(y_pred_train, y_true_train)
+        accuracy_train.append(acc_train)
+        
+        y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0)
+        _, acc_cv = calc_confusion_and_accurracy(y_pred_cv, y_true_cv)
+        accuracy_cv.append(acc_cv)
+
+        completed = EM_test_accuracy_plateau(accuracy_cv)
+
+    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its
 
 
 # Titus, Zach, from project 2
@@ -599,7 +626,7 @@ def main():
     training_set, cv_set, test_set = generate_split_dataset(num_clusters, num_samples, num_classes)
 
     # Runs the overall EM function
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_loglikelihood_2, its1, its2 = EM_uwplatt(
+    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its1, its2 = EM_uwplatt(
         training_set, num_clusters * num_classes, cv_set)
     print(mean_matrix.shape)
     print(cov_matrix.shape)
@@ -632,7 +659,7 @@ def main():
     y2 = dataset_log_likelihood_2
 
     # Shows the final 3D and contour plot
-    # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
     
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
