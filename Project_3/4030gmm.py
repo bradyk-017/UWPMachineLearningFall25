@@ -5,7 +5,6 @@ import random as rand
 from scipy.stats import norm
 from matplotlib import cm
 
-
 # Generate static dataset for EM
 def generate_static_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
     dataset = generate_dataset(no_of_clusters, no_of_points_per_cluster)
