@@ -484,17 +484,17 @@ def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix, label):
 # Ashton
 def det_curve(test_set, gmm0, gmm1):
     num_of_points = 50
-    y_true = test_set[:, -1].astype(int)
-    X = test_set[:, :-1]
-    y_pred = []
+    # y_true = test_set[:, -1].astype(int)
+    points = test_set[:, :-1]
+    # y_pred = []
 
     mean0, cov0, w0 = gmm0
     mean1, cov1, w1 = gmm1
 
     lambdas = []
-    for x in X:
-        ll0 = sample_log_likelihood(x, mean0, cov0, w0)
-        ll1 = sample_log_likelihood(x, mean1, cov1, w1)
+    for point in points:
+        ll0 = sample_log_likelihood(point, mean0, cov0, w0)
+        ll1 = sample_log_likelihood(point, mean1, cov1, w1)
         lambdas.append(ll1 - ll0)
     lambdas = np.array(lambdas)
 
@@ -514,13 +514,15 @@ def det_curve(test_set, gmm0, gmm1):
 
     # all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
-    plt.plot(FARs, FRRs, marker='o', linestyle='-')
+    plt.plot(FARs, FRRs, marker='o', linestyle='-', label='DET threshold curve')
+    eer_line_values = np.linspace(min(norm.ppf(FARs)), max(norm.ppf(FARs)), 100)
+    plt.plot(eer_line_values, eer_line_values, linestyle='--', color='red', label='FAR = FRR (EER Line)')
     plt.xlabel("False Acceptance Rate (FAR)")
     plt.ylabel("False Rejection Rate (FRR)")
     plt.title("DET Curve")
+    plt.legend()
     plt.grid(True, which="both", ls="--")
     plt.show()
-
 
 # Titus, from project 2, Edits from Brady
 def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
