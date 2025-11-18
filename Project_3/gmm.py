@@ -109,8 +109,8 @@ def shift_data(data, mu, sigma, fi):
 
 
 def shift_class(dataset):
-    mu_upper = 40
-    mu_lower = -40
+    mu_upper = 10
+    mu_lower = -10
     mu = np.array([rand.randint(mu_lower, mu_upper), rand.randint(mu_lower, mu_upper)])
 
     shifted_class = dataset + mu
@@ -368,7 +368,7 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
 
     return y_pred
 
-def calc_confusion_and_accurracy(y_pred)
+def calc_confusion_and_accurracy(y_pred):
     # Confusion matrix new
     true_pos = np.sum((y_pred == 1) & (y_true == 1))
     true_neg = np.sum((y_pred == 0) & (y_true == 0))
@@ -548,6 +548,7 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
     dataset_log_likelihood_cv2 = []
     its_1 = 0
     its_2 = 0
+    no_dim = 2
     # print(ext_matrix, mean_matrix, cov_matrix)
 
     while not completed_1 or not completed_2 or not completed_cv:
@@ -562,7 +563,7 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
         # If GMM1 has not converged
         if not completed_1:
             # Track performance of GMM1
-            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == 0), :], 
+            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
                                                             mean_matrix[0], cov_matrix[:, 0:no_dim], component_weights_matrix[0])
             
             dataset_log_likelihood_1.append(likelihood1)
@@ -573,8 +574,8 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
 
         if not completed_2:
             # Track performance of GMM2
-            likelihood1 = EM_uwplatt_dataset_log_likelihood(ext_matrix_m = ext_matrix[(ext_matrix[:, -1] == 0), :], 
-                                                            mean_matrix[1], cov_matrix[:, 1:no_dim], component_weights_matrix[1])
+            likelihood2 = EM_uwplatt_dataset_log_likelihood(ext_matrix[(ext_matrix[:, -1] == 0), :], 
+                                                            mean_matrix[1], cov_matrix[:, no_dim:], component_weights_matrix[1])
             
             dataset_log_likelihood_2.append(likelihood2)
 
