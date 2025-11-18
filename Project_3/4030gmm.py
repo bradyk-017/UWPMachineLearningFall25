@@ -454,8 +454,29 @@ def threshold_sweep():
     return None
 
 # Zach
-def det_curve():
-    return None
+
+def det_curve(confusion_matrix):
+    TP = confusion_matrix[0, 0]
+    FN = confusion_matrix[0, 1]
+    FP = confusion_matrix[1, 0]
+    TN = confusion_matrix[1, 1]
+    FARs = []
+    FRRs = []
+    FAR = FP / (FP + TN)
+    FRR = FN / (FN + TP)
+    FARs.append(FAR)
+    FRRs.append(FRR)
+    #all plt configuration within this function was made with a LLM
+    plt.figure(figsize=(7, 6))
+    plt.plot(FARs, FRRs, marker='o', linestyle='-')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel("False Acceptance Rate (FAR)")
+    plt.ylabel("False Rejection Rate (FRR)")
+    plt.title("DET Curve")
+    plt.grid(True, which="both", ls="--")
+    plt.show()
+
 
 # Titus, from project 2, Edits from Brady
 def EM_uwplatt(data_matrix, no_of_components):
