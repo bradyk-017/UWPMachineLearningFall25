@@ -537,8 +537,7 @@ def det_curve(test_set, gmm0, gmm1):
     # all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
     plt.plot(FARs, FRRs, marker='o', linestyle='-', label='DET threshold curve')
-    eer_line_values = np.linspace(min(norm.ppf(FARs)), max(norm.ppf(FARs)), 100)
-    plt.plot(eer_line_values, eer_line_values, linestyle='--', color='red', label='FAR = FRR (EER Line)')
+    plt.plot((0,1), (0,1), linestyle='--', color='red', label='FAR = FRR (EER Line)')
     plt.xlabel("False Acceptance Rate (FAR)")
     plt.ylabel("False Rejection Rate (FRR)")
     plt.title("DET Curve")
@@ -549,9 +548,7 @@ def det_curve(test_set, gmm0, gmm1):
 
 # Titus, from project 2, Edits from Brady
 def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
-    completed_1 = False
-    completed_2 = False
-    completed_cv = False
+    completed = False
 
     ext_matrix, mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_init(data_matrix, no_of_components)
 
@@ -563,7 +560,7 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
     no_dim = 2
     # print(ext_matrix, mean_matrix, cov_matrix)
 
-    while not completed_1:
+    while not completed:
         # Re-calculate extended matrix and upaate others
         ext_matrix = EM_uwplatt_expectation(ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
         mean_matrix, cov_matrix, component_weights_matrix = EM_uwplatt_maximization(ext_matrix, mean_matrix, cov_matrix,
@@ -607,10 +604,11 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
         y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0)
         _, acc_cv = calc_confusion_and_accurracy(y_pred_cv, y_true_cv)
         accuracy_cv.append(acc_cv)
+        print(f"acc_cv: {acc_cv}")
 
         completed = EM_test_accuracy_plateau(accuracy_cv)
 
-    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its
+    return mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, accuracy_train, accuracy_cv, its
 
 
 # Titus, Zach, from project 2
@@ -626,7 +624,7 @@ def main():
     training_set, cv_set, test_set = generate_split_dataset(num_clusters, num_samples, num_classes)
 
     # Runs the overall EM function
-    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, its1, its2 = EM_uwplatt(
+    mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, accuracy_train, accuracy_cv, its = EM_uwplatt(
         training_set, num_clusters * num_classes, cv_set)
     print(mean_matrix.shape)
     print(cov_matrix.shape)
@@ -647,23 +645,28 @@ def main():
 
     det_curve(test_set, gmm0, gmm1)
 
-    print(its1)
+    print(its)
     print(dataset_log_likelihood_1)
-    x1 = list(range(len(dataset_log_likelihood_1)))
-    y1 = dataset_log_likelihood_1
+    x_log1 = list(range(len(dataset_log_likelihood_1)))
+    y_log1 = dataset_log_likelihood_1
 
-    print(its2)
     print(dataset_log_likelihood_2)
 
-    x2 = list(range(len(dataset_log_likelihood_2)))
-    y2 = dataset_log_likelihood_2
+    x_log2 = list(range(len(dataset_log_likelihood_2)))
+    y_log2 = dataset_log_likelihood_2
+
+    x_acc_train = list(range(len(accuracy_train)))
+    y_acc_train = accuracy_train
+    
+    x_acc_cv = list(range(len(accuracy_cv)))
+    y_acc_cv = accuracy_cv
 
     # Shows the final 3D and contour plot
     #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
     
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
-    plt.plot(x1, y1, marker="o", linestyle="-", color="black")
+    plt.plot(x_log1, y_log1, marker="o", linestyle="-", color="black")
     plt.xlabel("Iterations for GMM 1")
     plt.ylabel("Log-Likelihood for GMM 1")
     plt.title("EM Convergence for GMM 1: Log-Likelihood Trend")
@@ -672,10 +675,28 @@ def main():
     plt.show()
 
     plt.figure(figsize=(8, 5))
-    plt.plot(x2, y2, marker="o", linestyle="-", color="black")
+    plt.plot(x_log2, y_log2, marker="o", linestyle="-", color="black")
     plt.xlabel("Iterations for GMM 2")
     plt.ylabel("Log-Likelihood for GMM 2")
     plt.title("EM Convergence for GMM 2: Log-Likelihood Trend")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x_acc_train, y_acc_train, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations")
+    plt.ylabel("Accuracy for Training Set")
+    plt.title("Accuracy of Training Set Vs. Iterations")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(x_acc_cv, y_acc_cv, marker="o", linestyle="-", color="black")
+    plt.xlabel("Iterations")
+    plt.ylabel("Accuracy for C-V Set")
+    plt.title("Accuracy of C-V Vs. Iterations")
     plt.grid(True)
     plt.tight_layout()
     plt.show()
