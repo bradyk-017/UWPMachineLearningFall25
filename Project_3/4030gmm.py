@@ -1,10 +1,10 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 import math
 import random as rand
 from scipy.stats import norm
 from matplotlib import cm
-
 
 # Generate static dataset for EM
 def generate_static_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
@@ -347,8 +347,7 @@ def sample_log_likelihood(x, mean_matrix, cov_matrices, cw_matrix):
     return np.log(total_pdf)
 
 
-def classify_with_likelihood_ratio(test_set, gmm0, gmm1):
-    threshold = 0
+def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
     mean0, cov0, w0 = gmm0
     mean1, cov1, w1 = gmm1
 
@@ -399,6 +398,7 @@ def multivariate_gaussian(pos, mu, Sigma):
 # Zach
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     no_components = cw_matrix.size
+    print("Components", no_components)
     no_GMMS = cw_matrix.shape[0]
     no_clusters = no_components // no_GMMS
     no_dim = 2
@@ -467,29 +467,42 @@ def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix, label):
 
 # TODO
 
-# Zach
-def threshold_sweep():
+# Ashton
+def det_curve(test_set, gmm0, gmm1):
+    num_of_points = 50
+    y_true = test_set[:, -1].astype(int)
+    X = test_set[:, :-1]
+    y_pred = []
 
-    return None
+    mean0, cov0, w0 = gmm0
+    mean1, cov1, w1 = gmm1
 
-# Zach
+    lambdas = []
+    for x in X:
+        ll0 = sample_log_likelihood(x, mean0, cov0, w0)
+        ll1 = sample_log_likelihood(x, mean1, cov1, w1)
+        lambdas.append(ll1 - ll0)
+    lambdas = np.array(lambdas)
 
-def det_curve(confusion_matrix):
-    TP = confusion_matrix[0, 0]
-    FN = confusion_matrix[0, 1]
-    FP = confusion_matrix[1, 0]
-    TN = confusion_matrix[1, 1]
+    thresholds = np.linspace(np.min(lambdas), np.max(lambdas), num_of_points)
+
     FARs = []
     FRRs = []
-    FAR = FP / (FP + TN)
-    FRR = FN / (FN + TP)
-    FARs.append(FAR)
-    FRRs.append(FRR)
+
+    for thresh in thresholds:
+        cm, _ = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
+        TP, FN = cm[0]
+        FP, TN = cm[1]
+        FAR = FP / (FP + TN)
+        FRR = FN / (FN + TP)
+        FARs.append(FAR)
+        FRRs.append(FRR)
+
+
+
     #all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
     plt.plot(FARs, FRRs, marker='o', linestyle='-')
-    plt.xscale('log')
-    plt.yscale('log')
     plt.xlabel("False Acceptance Rate (FAR)")
     plt.ylabel("False Rejection Rate (FRR)")
     plt.title("DET Curve")
@@ -567,11 +580,13 @@ def main():
     x1 = list(range(len(dataset_log_likelihood_1)))
     y1 = dataset_log_likelihood_1
 
-    print(its2)
-    print(dataset_log_likelihood_2)
+    det_curve(test_set, gmm0, gmm1)
 
-    x2 = list(range(len(dataset_log_likelihood_2)))
-    y2 = dataset_log_likelihood_2
+    # print(iterations)
+    # print(dataset_log_likelihood_matrix)
+
+    # x = list(range(len(dataset_log_likelihood_matrix)))
+    # y = dataset_log_likelihood_matrix
 
     # Shows the final 3D and contour plot
     # EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
