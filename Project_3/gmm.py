@@ -523,10 +523,13 @@ def det_curve(test_set, gmm0, gmm1):
 
     # all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
-    plt.plot(FARs, FRRs, marker='o', linestyle='-')
+    plt.plot(FARs, FRRs, marker='o', linestyle='-', label='DET threshold curve')
+    eer_line_values = np.linspace(min(norm.ppf(FARs)), max(norm.ppf(FARs)), 100)
+    plt.plot(eer_line_values, eer_line_values, linestyle='--', color='red', label='FAR = FRR (EER Line)')
     plt.xlabel("False Acceptance Rate (FAR)")
     plt.ylabel("False Rejection Rate (FRR)")
     plt.title("DET Curve")
+    plt.legend()
     plt.grid(True, which="both", ls="--")
     plt.show()
 
