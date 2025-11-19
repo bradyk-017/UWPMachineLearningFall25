@@ -319,7 +319,7 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix_m, mean_matrix, cov_matrix, cw_
             total_pdf += cw_matrix[k] * multivariate_gaussian(ext_matrix_m[:, :no_dim], mean_matrix[(no_dim*k):no_dim*(k+1)], 
                                   cov_matrix[k*no_dim:(k*no_dim)+no_dim])
             
-            log_likelihood += np.log(total_pdf).sum()
+            log_likelihood += np.log(total_pdf.sum())
         
     return log_likelihood
 
@@ -398,10 +398,10 @@ def EM_uwplatt_test_convergence(log_likelihoods, iteration):
         return False
 
 def EM_test_accuracy_plateau(accuracy):
-    if len(accuracy) < 2:
+    if len(accuracy) < 10:
         return False
     else:
-        threshold = 0.0001
+        threshold = 0.000001
         previous = accuracy[-2]
         current = accuracy[-1]
     
@@ -441,8 +441,8 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
 
     # Our 2-dimensional distribution will be over variables X and Y
     N = 60  # Number of ticks on X, Y axes
-    X = np.linspace(-30, 30, N)
-    Y = np.linspace(-30, 30, N)
+    X = np.linspace(-20, 20, N)
+    Y = np.linspace(-20, 20, N)
     X, Y = np.meshgrid(X, Y)
 
     # Pack X and Y into a single 3-dimensional array
@@ -533,6 +533,11 @@ def det_curve(test_set, gmm0, gmm1):
         FRR = FN / (FN + TP)
         FARs.append(FAR)
         FRRs.append(FRR)
+        if (abs(FAR - FRR) < 
+
+    print(f"Confusion matrix: \n")
+    for row in cm:
+        print(' '.join(map(str, row)))
 
     # all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
@@ -601,8 +606,8 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
         _, acc_train = calc_confusion_and_accurracy(y_pred_train, y_true_train)
         accuracy_train.append(acc_train)
         
-        y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0)
-        _, acc_cv = calc_confusion_and_accurracy(y_pred_cv, y_true_cv)
+        y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0.3)
+        cm, acc_cv = calc_confusion_and_accurracy(y_pred_cv, y_true_cv)
         accuracy_cv.append(acc_cv)
         print(f"acc_cv: {acc_cv}")
 
@@ -645,12 +650,12 @@ def main():
 
     det_curve(test_set, gmm0, gmm1)
 
-    print(its)
-    print(dataset_log_likelihood_1)
+    print(f"iteration: {its}")
+    print(f"log_likelihood_1: {dataset_log_likelihood_1}")
+    print(f"log_likelihood_2: {dataset_log_likelihood_2}")
+    
     x_log1 = list(range(len(dataset_log_likelihood_1)))
     y_log1 = dataset_log_likelihood_1
-
-    print(dataset_log_likelihood_2)
 
     x_log2 = list(range(len(dataset_log_likelihood_2)))
     y_log2 = dataset_log_likelihood_2
