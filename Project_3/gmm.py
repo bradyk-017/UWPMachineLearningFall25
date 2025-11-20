@@ -4,6 +4,7 @@ import math
 import random as rand
 from scipy.stats import norm
 from matplotlib import cm
+from sklearn.metrics import ConfusionMatrixDisplay
 
 
 # Generate static dataset for EM
@@ -440,9 +441,9 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     #print(no_clusters)
 
     # Our 2-dimensional distribution will be over variables X and Y
-    N = 60  # Number of ticks on X, Y axes
-    X = np.linspace(-20, 20, N)
-    Y = np.linspace(-20, 20, N)
+    N = 40  # Number of ticks on X, Y axes
+    X = np.linspace(-5, 15, N)
+    Y = np.linspace(-5, 15, N)
     X, Y = np.meshgrid(X, Y)
 
     # Pack X and Y into a single 3-dimensional array
@@ -524,6 +525,10 @@ def det_curve(test_set, gmm0, gmm1):
     FARs = []
     FRRs = []
 
+    err_found = False
+    err = [[-1, -1], [-1, -1]]
+
+
     for thresh in thresholds:
         y_pred, y_true = classify_with_likelihood_ratio(test_set, gmm0, gmm1, thresh)
         cm, _ = calc_confusion_and_accurracy(y_pred, y_true)
@@ -533,16 +538,25 @@ def det_curve(test_set, gmm0, gmm1):
         FRR = FN / (FN + TP)
         FARs.append(FAR)
         FRRs.append(FRR)
-        if (abs(FAR - FRR) < 
+        if (FAR - FRR) < 0 and not err_found:
+            err = cm
+            err_found = True
 
     print(f"Confusion matrix: \n")
-    for row in cm:
+    for row in err:
         print(' '.join(map(str, row)))
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=err)
+    disp.plot()
+    plt.title('Confusion Matrix')
+    plt.show()
 
     # all plt configuration within this function was made with a LLM
     plt.figure(figsize=(7, 6))
     plt.plot(FARs, FRRs, marker='o', linestyle='-', label='DET threshold curve')
     plt.plot((0,1), (0,1), linestyle='--', color='red', label='FAR = FRR (EER Line)')
+    plt.xscale("log")
+    plt.yscale("log")
     plt.xlabel("False Acceptance Rate (FAR)")
     plt.ylabel("False Rejection Rate (FRR)")
     plt.title("DET Curve")
@@ -628,11 +642,17 @@ def main():
 
     training_set, cv_set, test_set = generate_split_dataset(num_clusters, num_samples, num_classes)
 
+    # For testing the shifts of the dataset to try to get most of the generation to have ~20% class overlap
+    # for _ in range(10):
+    #     generate_split_dataset(num_clusters, num_samples, num_classes)
+
+
     # Runs the overall EM function
     mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, accuracy_train, accuracy_cv, its = EM_uwplatt(
         training_set, num_clusters * num_classes, cv_set)
-    print(mean_matrix.shape)
-    print(cov_matrix.shape)
+
+
+    
 
     # mean0, cov0, w0 = gmm0
     # mean1, cov1, w1 = gmm1
@@ -647,6 +667,8 @@ def main():
 
     gmm0 = (mean0, cov0, w0)
     gmm1 = (mean1, cov1, w1)
+    
+    
 
     det_curve(test_set, gmm0, gmm1)
 
@@ -668,6 +690,7 @@ def main():
 
     # Shows the final 3D and contour plot
     #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
+    
     
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
@@ -705,6 +728,8 @@ def main():
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+    
+
 
 
 if __name__ == "__main__":
