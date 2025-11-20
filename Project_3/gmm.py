@@ -6,28 +6,6 @@ from scipy.stats import norm
 from matplotlib import cm
 from sklearn.metrics import ConfusionMatrixDisplay
 
-
-# Generate static dataset for EM
-def generate_static_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
-    dataset = generate_dataset(no_of_clusters, no_of_points_per_cluster)
-
-    np.savetxt("static_dataset.csv", dataset, delimiter=",")
-    return
-
-
-# Gets the static dataset in the csv file for testing
-def read_static_dataset(num_of_components):
-    dataset = np.loadtxt("static_dataset.csv", delimiter=",")
-    for i in range(num_of_components):
-        offset = i * 1000
-        plt.scatter(dataset[offset:(offset + 1000), 0], dataset[offset:(offset + 1000), 1])
-    plt.show()
-    return dataset
-
-
-# Generates data from k-Means
-# Zach, from Project 1
-
 # TODO: modification for project 3:
 # o Clusters within a class should be close to each other to form a tight group.
 # o The overall inter-class overlap should be approximately 20%.
@@ -39,17 +17,21 @@ def read_static_dataset(num_of_components):
 # o Cross-validation (C-V) set: 20%
 # o Test set: 20%
 # b. Store both features and labels for each subset.
+# Generates data from k-Means
+# Zach, from Project 1
 def generate_class(label, no_of_clusters, no_of_points_per_cluster):
     dataset = generate_dataset(no_of_clusters, no_of_points_per_cluster)
 
     dataset = shift_class(dataset)
 
+    # Creates a matrix that is amount of samples in a class rows and 3 columns with the label
     labeled_dataset = np.full((no_of_clusters * no_of_points_per_cluster, 3), label)
 
+    # Replaces first 2 columns with samples
     labeled_dataset[:, :2] = dataset
     return labeled_dataset
 
-
+# Zach -Updated from project 2
 def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
     random_data = np.random.randn(no_of_points_per_cluster, 2)
 
@@ -57,7 +39,6 @@ def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
 
     transformed_data = shift_data(random_data, mu_new, sigma_new, fi)
 
-    # plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
     data_matrix = transformed_data
     for i in range(no_of_clusters - 1):
         random_data = np.random.randn(no_of_points_per_cluster, 2)
@@ -65,11 +46,7 @@ def generate_dataset(no_of_clusters: int, no_of_points_per_cluster: int):
 
         transformed_data = shift_data(random_data, mu_new, sigma_new, fi)
 
-        # plt.scatter(transformed_data[:, 0], transformed_data[:, 1])
-
         data_matrix = np.concatenate((data_matrix, transformed_data), axis=0)
-
-    # plt.show()
 
     return data_matrix
 
@@ -108,7 +85,7 @@ def shift_data(data, mu, sigma, fi):
 
     return shifted_data
 
-
+# Zach - Based on xy shifting of clusters from previous projects
 def shift_class(dataset):
     mu_upper = 10
     mu_lower = -10
@@ -118,7 +95,9 @@ def shift_class(dataset):
 
     return shifted_class
 
-
+# Zach
+# Generates two classes and plots them with different colors
+# Splits dataset into training, cv, and testing and returns the matrices
 def generate_split_dataset(num_clusters, num_samples, num_classes):
     class1 = generate_class(0, num_clusters, num_samples)
 
@@ -134,11 +113,15 @@ def generate_split_dataset(num_clusters, num_samples, num_classes):
 
     num_of_total_samples = num_samples * num_clusters * num_classes
 
+    # ChatGPT consulted on properly splitting dataset
+    # Shuffles data so classes can be split randomly
     np.random.shuffle(merged_dataset)
 
+    # Finds the bounds of where the splits occur
     first_split = round(0.6 * num_of_total_samples)
     second_split = round(0.8 * num_of_total_samples)
 
+    # Splits matrix into training, cv, and test with found boundries
     training_set = merged_dataset[:first_split]
     cv_set = merged_dataset[first_split:second_split]
     test_set = merged_dataset[second_split:]
@@ -146,7 +129,7 @@ def generate_split_dataset(num_clusters, num_samples, num_classes):
     return training_set, cv_set, test_set
 
 
-# Zach
+# Zach - Updated from project 2
 def EM_uwplatt_init(data_matrix, no_of_components):
     num_classes = 2
     num_clusters = no_of_components // num_classes
@@ -162,15 +145,13 @@ def EM_uwplatt_init(data_matrix, no_of_components):
         mean_matrix[i][0] = x_mean + x_mu
         mean_matrix[i][1] = y_mean + y_mu
 
+    # Reshapes mean matrix to support the GMMs being in different rows
     mean_matrix = np.reshape(mean_matrix, (2, no_of_components))
-
-    # row_mean1 = mean_matrix[np.newaxis, :num_clusters]
-    # row_mean2 = mean_matrix[np.newaxis, num_clusters:]
-    # mean_matrix = np.concatenate((row_mean1, row_mean2), axis=0)
 
     # Creates a matrix of no_of_component columns filled with 1 / no_of_components
     # Initializing component weights
     weights_matrix = np.full(no_of_components // 2, (1 / (no_of_components / 2)))
+    # Had issues with concatenating a matrix with size (4,), so ChatGPT was consulted on how to modify (4,) matrix for concatenation
     row_weights = weights_matrix[np.newaxis, :]
     component_weights_matrix = np.concatenate((row_weights, row_weights), axis=0)
 
@@ -180,30 +161,19 @@ def EM_uwplatt_init(data_matrix, no_of_components):
 
     # Rows - every other row (k2) indexes matrix of component K
     # Columns - every other column (m2) indexes the matrices of GMM m
-    # Creates a matrix of no_of_component global covariance matrices stacked
+    # Creates a matrix of shape (8, 4), which is essentially the 4 cov_matrix stacked in 2 columns for the 2 classes
     for _ in range(num_clusters - 1):
         temp_cov_matrix = np.concatenate((temp_cov_matrix, glob_cov), axis=0)
     cov_matrix = np.concatenate((temp_cov_matrix, temp_cov_matrix), axis=1)
 
-    # Creates the extended matrix of no of sample rows and 2 + no_of_component columns
+
+    # Creates the extended matrix of no of sample rows and 2 + no_of_component + 1 columns, + 1 is for the labels
     n_samples, no_dim = data_matrix.shape
+    # Does no_dim - 1 as the data matrix has an extra column for the labels
     no_dim = no_dim - 1
     ext_matrix = np.zeros((n_samples, no_dim + no_of_components + 1))
     ext_matrix[:, :no_dim] = data_matrix[:, :no_dim]
     ext_matrix[:, (no_dim + no_of_components):] = data_matrix[:, no_dim:]
-    '''
-    print("Mean Shape",mean_matrix.shape)
-    print(mean_matrix)
-
-    print("Cov Shape",cov_matrix.shape)
-    print(cov_matrix)
-
-    print("Component Matrix Shape",component_weights_matrix.shape)
-    print(component_weights_matrix)
-
-    print("Ext Shape", ext_matrix.shape)
-    print(ext_matrix)
-    '''
 
     return (ext_matrix, mean_matrix, cov_matrix, component_weights_matrix)
 
@@ -299,7 +269,7 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix_m, mean_matrix, cov_matrix, cw_
     no_components = cw_matrix.size
     no_GMMs = mean_matrix.size
     no_dim = cov_matrix.shape[COLS]
-    log_likelihood = 0;
+    log_likelihood = 0
     
     # data set log likeliness loop
     for i in range(ext_matrix_m.shape[ROWS]):
@@ -326,7 +296,6 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix_m, mean_matrix, cov_matrix, cw_
 
 
 # ashton
-
 def sample_log_likelihood(x, mean_matrix, cov_matrix, cw_matrix):
     K = cw_matrix.size
     D = 2
@@ -346,12 +315,9 @@ def sample_log_likelihood(x, mean_matrix, cov_matrix, cw_matrix):
 
         total_pdf += w * pdf_val
 
-        # total_pdf += cw_matrix[0, k] * multivariate_gaussian(x, mean_matrix[0, (no_dim * k):no_dim * (k + 1)], cov_matrix[k * no_dim:(k + 1) * no_dim, 0:2])
-
-    # total_pdf = max(total_pdf)
     return np.log(total_pdf)
 
-
+# Ashton
 def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
     mean0, cov0, w0 = gmm0
     mean1, cov1, w1 = gmm1
@@ -369,6 +335,7 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
 
     return y_pred, y_true
 
+# Brady
 def calc_confusion_and_accurracy(y_pred, y_true):
     # Confusion matrix new
     true_pos = np.sum((y_pred == 1) & (y_true == 1))
@@ -381,23 +348,9 @@ def calc_confusion_and_accurracy(y_pred, y_true):
 
     return confusion_matrix, accuracy
 
-
-def EM_uwplatt_test_convergence(log_likelihoods, iteration):
-    min_iterations = 10
-    threshold = 1e-4
-    end = len(log_likelihoods) - 1
-
-    #print(f" end: {log_likelihoods[end]}\nend1: {log_likelihoods[end-1]}")
-
-    #if iteration < min_iterations:
-        #return False
-
-    diff = log_likelihoods[end] - log_likelihoods[end - 1]
-    if diff < threshold:
-        return True
-    else:
-        return False
-
+# Zach
+# Based on previous converge testing, but updated to use accuracy
+# Threshold started from 0.01 and shifted
 def EM_test_accuracy_plateau(accuracy):
     if len(accuracy) < 10:
         return False
@@ -429,6 +382,24 @@ def multivariate_gaussian(pos, mu, Sigma):
     fac = np.einsum('...k,kl,...l->...', pos - mu, Sigma_inv, pos - mu)
     return np.exp(-fac / 2) / N
 
+# Zach
+# Splits the mean_matrix, cov_matrix, and cw_matrix for individual gmm
+def split_matrix_into_gmm(mean_matrix, cov_matrix, component_weights_matrix):
+    # mean0, cov0, w0 = gmm0
+    # mean1, cov1, w1 = gmm1
+    mean0 = mean_matrix[0, :]
+    mean1 = mean_matrix[1, :]
+
+    cov0 = cov_matrix[:, 0:2]
+    cov1 = cov_matrix[:, 2:4]
+
+    w0 = component_weights_matrix[0, :]
+    w1 = component_weights_matrix[1, :]
+
+    gmm0 = (mean0, cov0, w0)
+    gmm1 = (mean1, cov1, w1)
+
+    return gmm0, gmm1
 
 # Zach
 def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
@@ -436,14 +407,12 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     #print("Components", no_components)
     no_GMMS = cw_matrix.shape[0]
     no_clusters = no_components // no_GMMS
-    no_dim = 2
-    #print(cw_matrix.shape)
-    #print(no_clusters)
+    no_dim = cw_matrix.shape[0]
 
     # Our 2-dimensional distribution will be over variables X and Y
     N = 40  # Number of ticks on X, Y axes
-    X = np.linspace(-5, 15, N)
-    Y = np.linspace(-5, 15, N)
+    X = np.linspace(-10, 10, N)
+    Y = np.linspace(-10, 10, N)
     X, Y = np.meshgrid(X, Y)
 
     # Pack X and Y into a single 3-dimensional array
@@ -463,45 +432,6 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label):
     plt.show()
 
     return None  # Produces a contour plot
-
-
-def EM_uwplatt_3D_plot(mean_matrix, cov_matrix, cw_matrix, label):
-    no_components = cw_matrix.size
-    no_GMMS = cw_matrix.shape[0]
-    no_clusters = no_components // no_GMMS
-    no_dim = 2
-
-    # Our 2-dimensional distribution will be over variables X and Y
-    N = 60  # Number of ticks on X, Y axes
-    X = np.linspace(-40, 40, N)
-    Y = np.linspace(-40, 40, N)
-    X, Y = np.meshgrid(X, Y)
-
-    # Pack X and Y into a single 3-dimensional array
-    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
-    pos[:, :, 0] = X
-    pos[:, :, 1] = Y
-
-    # Iterates through the number of components and calculate the multivariate gaussian and scales it to the component weight
-    # Adds this to the z value that is used for the 3D plot
-    Z = 0
-    for i in range(no_clusters):
-        Z += cw_matrix[label, i] * multivariate_gaussian(pos, mean_matrix[label, (no_dim * i):no_dim * (i + 1)],
-                                                         cov_matrix[i * no_dim:(i + 1) * no_dim, 0:2])
-
-    # 3D plotting from canvas
-    # Create a surface plot and projected filled contour plot under it
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    ax.plot_surface(X, Y, Z, rstride=3, cstride=3, linewidth=1, antialiased=True, cmap=cm.viridis)
-    # Adjust the limits, ticks and view angle
-    ax.set_zlim(0, 0.02)
-    ax.set_zticks(np.linspace(0, 0.02, 5))
-    ax.view_init(27, -21)
-    plt.show()
-
-
-# TODO
 
 # Ashton
 def det_curve(test_set, gmm0, gmm1):
@@ -604,17 +534,7 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
 
         its += 1
 
-        mean0 = mean_matrix[0, :]
-        mean1 = mean_matrix[1, :]
-    
-        cov0 = cov_matrix[:, 0:2]
-        cov1 = cov_matrix[:, 2:4]
-    
-        w0 = component_weights_matrix[0, :]
-        w1 = component_weights_matrix[1, :]
-    
-        gmm0 = (mean0, cov0, w0)
-        gmm1 = (mean1, cov1, w1)
+        gmm0, gmm1 = split_matrix_into_gmm(mean_matrix, cov_matrix, component_weights_matrix)
 
         y_pred_train, y_true_train = classify_with_likelihood_ratio(np.delete(ext_matrix, slice(no_dim, -1), axis=1), gmm0, gmm1, 0)
         _, acc_train = calc_confusion_and_accurracy(y_pred_train, y_true_train)
@@ -651,24 +571,7 @@ def main():
     mean_matrix, cov_matrix, component_weights_matrix, dataset_log_likelihood_1, dataset_log_likelihood_2, accuracy_train, accuracy_cv, its = EM_uwplatt(
         training_set, num_clusters * num_classes, cv_set)
 
-
-    
-
-    # mean0, cov0, w0 = gmm0
-    # mean1, cov1, w1 = gmm1
-    mean0 = mean_matrix[0, :]
-    mean1 = mean_matrix[1, :]
-
-    cov0 = cov_matrix[:, 0:2]
-    cov1 = cov_matrix[:, 2:4]
-
-    w0 = component_weights_matrix[0, :]
-    w1 = component_weights_matrix[1, :]
-
-    gmm0 = (mean0, cov0, w0)
-    gmm1 = (mean1, cov1, w1)
-    
-    
+    gmm0, gmm1 = split_matrix_into_gmm(mean_matrix, cov_matrix, component_weights_matrix)
 
     det_curve(test_set, gmm0, gmm1)
 
@@ -688,10 +591,6 @@ def main():
     x_acc_cv = list(range(len(accuracy_cv)))
     y_acc_cv = accuracy_cv
 
-    # Shows the final 3D and contour plot
-    #EM_uwplatt_contour_plot(mean_matrix, cov_matrix, component_weights_matrix)
-    
-    
     # Graph parameters created using co-pilot
     plt.figure(figsize=(8, 5))
     plt.plot(x_log1, y_log1, marker="o", linestyle="-", color="black")
@@ -729,8 +628,6 @@ def main():
     plt.tight_layout()
     plt.show()
     
-
-
 
 if __name__ == "__main__":
     main()
