@@ -281,6 +281,11 @@ def EM_uwplatt_dataset_log_likelihood(ext_matrix_m, mean_matrix, cov_matrix, cw_
         # PDF calculation loop
         for k in range(0, no_components):
             # running sum of PDFs for the current component
+            total_pdf += cw_matrix[k] * multivariate_gaussian(
+                ext_matrix_m[:, :no_dim],
+                mean_matrix[(no_dim*k):no_dim*(k+1)],
+                cov_matrix[k*no_dim:(k*no_dim)+no_dim]
+            )
             
             log_likelihood += np.log(total_pdf.sum())
         
