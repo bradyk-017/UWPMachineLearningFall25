@@ -329,7 +329,7 @@ def classify_with_likelihood_ratio(test_set, gmm0, gmm1, threshold):
 
     return y_pred, y_true
 
-# Brady, Ashton
+# Ashton, Brady
 def calc_confusion_and_accurracy(y_pred, y_true):
     # Confusion matrix new
     true_pos = np.sum((y_pred == 1) & (y_true == 1))
@@ -431,7 +431,7 @@ def EM_uwplatt_contour_plot(mean_matrix, cov_matrix, cw_matrix, label, iteration
         Z += cw_matrix[label, i] * multivariate_gaussian(
             pos,
             mean_matrix[label, (no_dim * i):no_dim * (i + 1)],
-            cov_matrix[i * no_dim:(i + 1) * no_dim, 0:2]
+            cov_matrix[i * no_dim:(i + 1) * no_dim, label*no_dim:(label+1)*no_dim]
         )
 
     # Adds the information to the contour plot and shows the plot
@@ -547,14 +547,13 @@ def EM_uwplatt(data_matrix, no_of_components, cv_matrix):
 
         gmm0, gmm1 = split_matrix_into_gmm(mean_matrix, cov_matrix, component_weights_matrix)
 
-        y_pred_train, y_true_train = classify_with_likelihood_ratio(np.delete(ext_matrix, slice(no_dim, -1), axis=1), gmm0, gmm1, 0)
+        y_pred_train, y_true_train = classify_with_likelihood_ratio(np.delete(ext_matrix, slice(no_dim, -1), axis=1), gmm0, gmm1, 0.727079529)
         _, acc_train = calc_confusion_and_accurracy(y_pred_train, y_true_train)
         accuracy_train.append(acc_train)
         
-        y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0)
+        y_pred_cv, y_true_cv = classify_with_likelihood_ratio(cv_matrix, gmm0, gmm1, 0.727079529)
         cm, acc_cv = calc_confusion_and_accurracy(y_pred_cv, y_true_cv)
         accuracy_cv.append(acc_cv)
-        print(f"acc_cv: {acc_cv}")
 
         completed = EM_test_accuracy_plateau(accuracy_cv)
 
@@ -585,6 +584,8 @@ def main():
     )
 
     gmm0, gmm1 = split_matrix_into_gmm(mean_matrix, cov_matrix, component_weights_matrix)
+
+    print(f"Ending C-V Set Accuracy: {accuracy_cv[-1]}")
 
     det_curve(test_set, gmm0, gmm1)
 
