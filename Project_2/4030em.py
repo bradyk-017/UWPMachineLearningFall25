@@ -249,7 +249,7 @@ def EM_uwplatt_maximization(extended_matrix, mean_matrix, cov_matrix, component_
         # membership weights to optain the new covariance matrix.
         cov_k = np.dot(weighted_diff.T, diff) / sum_weights
 
-        # Update the covariance matrix for the k-th component
+        # Updat e the covariance matrixfor the k-th component
         cov_matrix[k*2:(k*2)+2, :] = cov_k 
 
     return (mean_matrix, cov_matrix, component_weights_matrix)
