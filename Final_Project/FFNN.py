@@ -27,13 +27,14 @@ import math
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-POINTS_PER_CLUSTER = 400
-
+# A neural network with:
+INPUTS = 784
+HIDDEN = 400
+    #  - an output layer with 1 neuron (o1)
 
 
 learn_rate = 0.1
 epochs = 100
-
 
 # Gets a value and calculates the sigmoid activation function
 # Returns this calculated value
@@ -50,13 +51,9 @@ def deriv_sigmoid(x):
     return fx * (1 - fx)
 
 
-'''
-This function takes in np arrays of the same length and calculates
-the square error for each sample and then finds the mean from those which is
- the mean squared error, which is then returned
-'''
-
-
+# This function takes in np arrays of the same length and calculates
+# the square error for each sample and then finds the mean from those which is
+# the mean squared error, which is then returned
 def mse_loss(y_true, y_pred):
     # y_true and y_pred are numpy arrays of the same length.
     return ((y_true - y_pred) ** 2).mean()
@@ -64,11 +61,6 @@ def mse_loss(y_true, y_pred):
 
 class OurNeuralNetwork:
     '''
-    A neural network with:
-      - 2 inputs
-      - a hidden layer with 2 neurons (h1, h2)
-      - an output layer with 1 neuron (o1)
-
     *** DISCLAIMER ***:
     The code below is intended to be simple and educational, NOT optimal.
     Real neural net code looks nothing like this. DO NOT use this code.
@@ -76,21 +68,20 @@ class OurNeuralNetwork:
     '''
 
     def __init__(self):
-        # Weights
-        self.w1 = np.random.normal()
-        self.w2 = np.random.normal()
-        self.w3 = np.random.normal()
-        self.w4 = np.random.normal()
-        self.w5 = np.random.normal()
-        self.w6 = np.random.normal()
-
-        # Biases
-        self.b1 = np.random.normal()
-        self.b2 = np.random.normal()
-        self.b3 = np.random.normal()
-
-    def feedforward(self, x):
+        # Grabbing dataset and formatting
+        mnist = fetch_openml('mnist_784', version=1, as_frame=False)
+        self.labels = mnist['target'].astype(np.int64)
+        self.data = mnist['data'] / 255.0
+    
+        # Weights and Biases
+        self.input_wb = np.random.normal(size=(2, INPUTS))
+        self.hidden_wb = np.random.normal(size=(2, 2, HIDDEN)) # weights/biases, layers, neurons
+        self.output_wb = np.random.normal(size=(2, 10))
+    
+    # TODO stuff below here
+    def feedforward(self, input):
         # x is a numpy array with 2 elements.
+        hidden1 = [sigmoid(sum(self.input_wb[0, i] * input[i] for i in range(INPUTS)) + self.input_wb[1, n]) for n in range(HIDDEN)] # TODO: probably copyish this, should pretty much be it
         h1 = sigmoid(self.w1 * x[0] + self.w2 * x[1] + self.b1)
         h2 = sigmoid(self.w3 * x[0] + self.w4 * x[1] + self.b2)
         o1 = sigmoid(self.w5 * h1 + self.w6 * h2 + self.b3)
@@ -176,66 +167,8 @@ class OurNeuralNetwork:
                 loss = mse_loss(y_train, y_preds)
                 print("Epoch %d loss: %.3f" % (epoch, loss))
 
-        return (mse_loss_trend_train, mse_loss_trend_cross_validation)
-
+        return mse_loss_trend_train, mse_loss_trend_cross_validation
     # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
-
-
-# Returns the data
-def generate_cluster(no_points, mean, sigmas, rotation_angle):
-    Data = np.random.randn(no_points, 2)
-    mu_new = mean
-    sigma_new = sigmas
-    fi = rotation_angle
-
-    cos_fi = math.cos(fi)
-    sin_fi = math.sin(fi)
-    Rotate_Matrix = np.array([[cos_fi, -sin_fi], [sin_fi, cos_fi]])
-
-    Data_new = (Data).dot(sigma_new)
-    Data_new_rotated = Data_new.dot(Rotate_Matrix.T)
-    Data_new_rotated_shifted = Data_new.dot(Rotate_Matrix.T) + mu_new
-
-    return Data_new_rotated_shifted
-
-
-# Generates the values to transform each cluster
-# Calls the generate_cluster() function and passed the created values
-# Plots the two clusters on the same scatterplot
-# Combines the data into a single matrix and creates a corresponding matrix with the label of for each point
-# based on the cluster
-# Puts data into pandas dataframe with columns x, y, target
-def generate_clusters():
-    NO_POINTS_PER_CLASS = POINTS_PER_CLUSTER
-    mean_1 = np.array([2, 2])
-    mean_2 = np.array([10, 8])
-    sigmas_1 = np.array([[2, 0], [0, 3]])
-    sigmas_2 = np.array([[1.5, 0], [0, 5]])
-
-    rotation_angle_1 = math.pi / 4
-    rotation_angle_2 = -math.pi / 4
-    no_points_1 = NO_POINTS_PER_CLASS
-    no_points_2 = NO_POINTS_PER_CLASS
-
-    Class_1 = generate_cluster(no_points_1, mean_1, sigmas_1, rotation_angle_1)
-    Class_2 = generate_cluster(no_points_2, mean_2, sigmas_2, rotation_angle_2)
-
-    plt.scatter(Class_1[:, 0], Class_1[:, 1], color='b')
-    plt.scatter(Class_2[:, 0], Class_2[:, 1], color='r')
-
-    axes = plt.gca()
-    axes.set_aspect(aspect='equal')
-    plt.show(block=False)
-    plt.pause(2)  # show for 2 seconds (adjust as desired)
-    plt.close()
-
-    Classes_Pooled = np.concatenate((Class_1, Class_2), axis=0)
-
-    target = np.concatenate((np.zeros((no_points_1)), np.ones((no_points_2))), axis=0)
-    df = pd.DataFrame({'x': Classes_Pooled[:, 0], 'y': Classes_Pooled[:, 1], 'target': target})
-
-    return df
-
 
 # Displays the side by side of two matrices, made for before and after scaling
 def display_sbs_plots(before_matrix, after_matrix):
@@ -256,14 +189,12 @@ def display_sbs_plots(before_matrix, after_matrix):
 
     return
 
-
 # Takes in the matrix and returns the mean of the matrix and the cov matrix of the matrix
 def generate_mean_cov(matrix):
     mean_xy = np.mean(matrix, axis=0)
     cov = np.cov(matrix, rowvar=False)
 
     return mean_xy, cov
-
 
 # Takes the before and after matrix and displays the dataset mean and dataset covariance matrix of each
 def display_mean_cov(before_matrix, after_matrix):
@@ -286,7 +217,8 @@ def display_mean_cov(before_matrix, after_matrix):
     print("---------------------------------------------------")
 
     return
-#one hot vector
+
+# one hot vector
 def one_hot(y, num_classes=10):
     return np.eye(num_classes)[y]
 
@@ -295,32 +227,30 @@ def main():
 
     #print(df)
 
-    #X = df.drop('target', axis=1)
+    #x = df.drop('target', axis=1)
     #y = df['target']
 
-    #X = X.to_numpy()
+    #x = x.to_numpy()
     # Grabbing dataset and formatting
     mnist = fetch_openml('mnist_784', version=1, as_frame=False)
-    X, y = mnist['data'], mnist['target']
+    x, y = mnist['data'], mnist['target']
     y = y.astype(np.int64)
-    X = X / 255.0
+    x = x / 255.0
 
     #scaler = StandardScaler()
     #scaled_df = scaler.fit_transform(df)
     #scaled_df_no_labels = scaled_df[:, :2]
 
-    #display_sbs_plots(X, scaled_df_no_labels)
-    #display_mean_cov(X, scaled_df_no_labels)
+    #display_sbs_plots(x, scaled_df_no_labels)
+    #display_mean_cov(x, scaled_df_no_labels)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
     y_train = one_hot(y_train, 10)
     y_test = one_hot(y_test, 10)
 
-
     mse_loss_trend = np.zeros((epochs))
     network = OurNeuralNetwork()
-    mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(X_train, y_train)
+    mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
     plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
     plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
     plt.xlabel('Epochs')
@@ -328,7 +258,7 @@ def main():
     plt.legend()
 
     #all_y_predicted_soft = np.zeros((y_test.size))
-    all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, X_test)
+    all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, x_test)
     all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
     y_test_labels = np.argmax(y_test, axis=1)
 
@@ -345,4 +275,5 @@ def main():
 
 
 # Code execution starts here
-main()
+if __name__ == "__main__":
+    main()
