@@ -73,11 +73,15 @@ class OurNeuralNetwork:
     '''
 
     def __init__(self):
-        # Weights
+        # Weights:
+        # - weights1: (400, 784) -> For input and hidden layers
+        # - weights2: (10, 400) -> For hidden to output layers
         self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
         self.weights2 = np.random.normal(size=(OUTPUTS, HIDDEN))
 
         # Biases
+        # - bias1: (400, 1) -> For hidden layers
+        # - bias2: (10, 1) -> For output layer
         self.bias1 = np.random.normal(size=(HIDDEN, 1))
         self.bias2 = np.random.normal(size=(OUTPUTS, 1))
 
@@ -115,13 +119,13 @@ class OurNeuralNetwork:
         for epoch in range(epochs):
             for x, y_true in zip(data_train, y_train):
                 # --- Do a feedforward (we'll need these values later)
-                sum_h1 = self.w1 * x[0] + self.w2 * x[1] + self.b1
+                sum_h1 = self.weights1 * x[0] + self.weights2 * x[1] + self.bias1
                 h1 = sigmoid(sum_h1)
 
-                sum_h2 = self.w3 * x[0] + self.w4 * x[1] + self.b2
+                sum_h2 = self.weights3 * x[0] + self.weights4 * x[1] + self.bias2
                 h2 = sigmoid(sum_h2)
 
-                sum_o1 = self.w5 * h1 + self.w6 * h2 + self.b3
+                sum_o1 = self.weights5 * h1 + self.weights6 * h2 + self.bias3
                 o1 = sigmoid(sum_o1)
                 y_pred = o1
 
@@ -134,8 +138,8 @@ class OurNeuralNetwork:
                 d_ypred_d_w6 = h2 * deriv_sigmoid(sum_o1)
                 d_ypred_d_b3 = deriv_sigmoid(sum_o1)
 
-                d_ypred_d_h1 = self.w5 * deriv_sigmoid(sum_o1)
-                d_ypred_d_h2 = self.w6 * deriv_sigmoid(sum_o1)
+                d_ypred_d_h1 = self.weights5 * deriv_sigmoid(sum_o1)
+                d_ypred_d_h2 = self.weights6 * deriv_sigmoid(sum_o1)
 
                 # Neuron h1
                 d_h1_d_w1 = x[0] * deriv_sigmoid(sum_h1)
@@ -149,19 +153,19 @@ class OurNeuralNetwork:
 
                 # --- Update weights and biases
                 # Neuron h1
-                self.w1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w1
-                self.w2 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w2
-                self.b1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_b1
+                self.weights1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w1
+                self.weights2 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w2
+                self.bias1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_b1
 
                 # Neuron h2
-                self.w3 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w3
-                self.w4 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w4
-                self.b2 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_b2
+                self.weights3 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w3
+                self.weights4 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w4
+                self.bias2 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_b2
 
                 # Neuron o1
-                self.w5 -= learn_rate * d_L_d_ypred * d_ypred_d_w5
-                self.w6 -= learn_rate * d_L_d_ypred * d_ypred_d_w6
-                self.b3 -= learn_rate * d_L_d_ypred * d_ypred_d_b3
+                self.weights5 -= learn_rate * d_L_d_ypred * d_ypred_d_w5
+                self.weights6 -= learn_rate * d_L_d_ypred * d_ypred_d_w6
+                self.bias3 -= learn_rate * d_L_d_ypred * d_ypred_d_b3
 
             # Feedforward pass on actual train set -> MSE loss on train
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
@@ -242,10 +246,17 @@ def main():
     #y = df['target']
 
     #x = x.to_numpy()
+    
     # Grabbing dataset and formatting
     mnist = fetch_openml('mnist_784', version=1, as_frame=False)
-    x, y = mnist['data'], mnist['target']
+
+    # Assign data -> x; Assign labels -> y;
+    x, y = mnist['data'], mnist['target'] 
+
+    # Converting training labels to integers.
     y = y.astype(np.int64)
+
+    # Scaling down?
     x = x / 255.0
 
     #scaler = StandardScaler()
@@ -255,12 +266,23 @@ def main():
     #display_sbs_plots(x, scaled_df_no_labels)
     #display_mean_cov(x, scaled_df_no_labels)
 
+    # Split the data into training data (x_train) and labels (y_train)
+    # and a CV data (x_test) and labels (y_test)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+    print(y_train.shape(), y_test.shape())
+    
+    # Changes training and test labels from a single column to one-hot vectors
     y_train = one_hot(y_train, 10)
     y_test = one_hot(y_test, 10)
 
+    # Instantiate MSE loss trend matrix
     mse_loss_trend = np.zeros((epochs))
+
+    # Create Neural Network Object
     network = OurNeuralNetwork()
+
+    # Call training function on our neural network, giving training data and labels as inputs
     mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
     plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
     plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
