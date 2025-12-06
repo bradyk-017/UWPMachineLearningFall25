@@ -31,11 +31,12 @@ from sklearn.model_selection import train_test_split
 INPUTS = 784
 HIDDEN = 400
 OUTPUTS = 10
+SAMPLES_USED = 7000
     #  - an output layer with 1 neuron (o1)
 
 
 learn_rate = 0.1
-epochs = 100
+epochs = 10
 
 # Gets a value and calculates the sigmoid activation function
 # Returns this calculated value
@@ -87,18 +88,14 @@ class OurNeuralNetwork:
 
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
+        x = x.reshape(-1, 1)
 
-        '''
-        h1 = sigmoid(self.w1 * x[0] + self.w2 * x[1] + self.b1)
-        h2 = sigmoid(self.w3 * x[0] + self.w4 * x[1] + self.b2)
-        o1 = sigmoid(self.w5 * h1 + self.w6 * h2 + self.b3)
-        '''
         # Hidden layer: h = sigmoid
-        z1 = self.weights1 @ x + self.bias1  # (4×784 @ 784×1) → (4×1)
+        z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
         h = sigmoid(z1)
 
         # Output layer: z = W2*h + b2
-        z2 = self.weights2 @ h + self.bias2  # (10×4 @ 4×1) → (10×1)
+        z2 = self.weights2.dot(h) + self.bias2  # (10×4 @ 4×1) → (10×1)
         o = softmax(z2)
         return o.flatten()
 
@@ -118,57 +115,58 @@ class OurNeuralNetwork:
 
         for epoch in range(epochs):
             for x, y_true in zip(data_train, y_train):
+                # 1. Ensure column vectors
+                x = x.reshape(-1, 1)  # (784,1)
+                y_true = y_true.reshape(-1, 1)  # (10,1)
+
                 # --- Do a feedforward (we'll need these values later)
-                sum_h1 = self.weights1 * x[0] + self.weights2 * x[1] + self.bias1
-                h1 = sigmoid(sum_h1)
+                # Hidden layer: h = sigmoid
+                z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+                h = sigmoid(z1)
 
-                sum_h2 = self.weights3 * x[0] + self.weights4 * x[1] + self.bias2
-                h2 = sigmoid(sum_h2)
-
-                sum_o1 = self.weights5 * h1 + self.weights6 * h2 + self.bias3
-                o1 = sigmoid(sum_o1)
-                y_pred = o1
-
+                sum_o1 = self.weights2.dot(h) + self.bias2  # (10×4 @ 4×1) → (10×1)
+                o = softmax(sum_o1)
+                y_pred = o
+                y_pred = y_pred.reshape(-1, 1)  # (10,1)
                 # --- Calculate partial derivatives.
                 # --- Naming: d_L_d_w1 represents "partial L / partial w1"
-                d_L_d_ypred = -2 * (y_true - y_pred)
+                '''
+                d_L_d_ypred = -2 * (y_true - y_pred).reshape(-1, 1)
 
-                # Neuron o1
-                d_ypred_d_w5 = h1 * deriv_sigmoid(sum_o1)
-                d_ypred_d_w6 = h2 * deriv_sigmoid(sum_o1)
-                d_ypred_d_b3 = deriv_sigmoid(sum_o1)
 
-                d_ypred_d_h1 = self.weights5 * deriv_sigmoid(sum_o1)
-                d_ypred_d_h2 = self.weights6 * deriv_sigmoid(sum_o1)
+                dL_dw2 = d_L_d_ypred.dot(h.T)  # shape (output_size, hidden_size)
+                dL_db2 = d_L_d_ypred
+                dL_dh = self.weights2.T.dot(d_L_d_ypred)  # shape (hidden_size,1)
+                dL_dz1 = dL_dh * deriv_sigmoid(z1).reshape(-1, 1)
+                dL_dw1 = dL_dz1.dot(x.T)  # shape (hidden_size, input_size)
+                dL_db1 = dL_dz1
+                '''
 
-                # Neuron h1
-                d_h1_d_w1 = x[0] * deriv_sigmoid(sum_h1)
-                d_h1_d_w2 = x[1] * deriv_sigmoid(sum_h1)
-                d_h1_d_b1 = deriv_sigmoid(sum_h1)
 
-                # Neuron h2
-                d_h2_d_w3 = x[0] * deriv_sigmoid(sum_h2)
-                d_h2_d_w4 = x[1] * deriv_sigmoid(sum_h2)
-                d_h2_d_b2 = deriv_sigmoid(sum_h2)
+
+                # 2. Output layer gradient
+                dL_dy = 2 * (y_pred - y_true)  # (10,1)
+                dL_dw2 = dL_dy @ h.T  # (output_size, hidden_size) = (10,4)
+                dL_db2 = dL_dy  # (10,1)
+                dL_dh = self.weights2.T @ dL_dy  # (hidden_size,1) = (4,1)
+
+                # 3. Hidden layer gradient
+                dL_dz1 = dL_dh * deriv_sigmoid(z1)  # elementwise multiplication (4,1)
+                dL_dw1 = dL_dz1 @ x.T  # (hidden_size, input_size) = (4,784)
+                dL_db1 = dL_dz1  # (4,1)
 
                 # --- Update weights and biases
-                # Neuron h1
-                self.weights1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w1
-                self.weights2 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_w2
-                self.bias1 -= learn_rate * d_L_d_ypred * d_ypred_d_h1 * d_h1_d_b1
+                # Output layer
+                self.weights2 -= learn_rate * dL_dw2
+                self.bias2 -= learn_rate * dL_db2  # shape matches (output_size,1)
 
-                # Neuron h2
-                self.weights3 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w3
-                self.weights4 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_w4
-                self.bias2 -= learn_rate * d_L_d_ypred * d_ypred_d_h2 * d_h2_d_b2
-
-                # Neuron o1
-                self.weights5 -= learn_rate * d_L_d_ypred * d_ypred_d_w5
-                self.weights6 -= learn_rate * d_L_d_ypred * d_ypred_d_w6
-                self.bias3 -= learn_rate * d_L_d_ypred * d_ypred_d_b3
+                # Hidden layer
+                self.weights1 -= learn_rate * dL_dw1
+                self.bias1 -= learn_rate * dL_db1  # shape matches (hidden_size,1)
 
             # Feedforward pass on actual train set -> MSE loss on train
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
+
             mse_loss_trend_train[epoch_counter] = mse_loss(y_train, y_preds)
 
             # Feedforward pass on CV set -> MSE loss on CV set
@@ -176,11 +174,18 @@ class OurNeuralNetwork:
             mse_loss_trend_cross_validation[epoch_counter] = mse_loss(y_cross_valid, y_preds_cross_valid)
             epoch_counter += 1
 
+            '''
             # --- Calculate total loss at the end of each 10 epochs
             if epoch % 10 == 0:
                 y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
                 loss = mse_loss(y_train, y_preds)
                 print("Epoch %d loss: %.3f" % (epoch, loss))
+            '''
+            # Changed because there was really no change after 10 epochs
+            y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
+            loss = mse_loss(y_train, y_preds)
+            print("Epoch %d loss: %.3f" % (epoch, loss))
+
 
         return mse_loss_trend_train, mse_loss_trend_cross_validation
     # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
@@ -265,12 +270,15 @@ def main():
 
     #display_sbs_plots(x, scaled_df_no_labels)
     #display_mean_cov(x, scaled_df_no_labels)
+    print(x.shape)
+    # Running less of the data so it runs faster
+    x = x[:SAMPLES_USED, :]
+    y = y[:SAMPLES_USED]
+
 
     # Split the data into training data (x_train) and labels (y_train)
     # and a CV data (x_test) and labels (y_test)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-
-    print(y_train.shape(), y_test.shape())
     
     # Changes training and test labels from a single column to one-hot vectors
     y_train = one_hot(y_train, 10)
