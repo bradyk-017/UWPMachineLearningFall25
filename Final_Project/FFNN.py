@@ -30,6 +30,7 @@ from sklearn.model_selection import train_test_split
 # A neural network with:
 INPUTS = 784
 HIDDEN = 400
+OUTPUTS = 10
     #  - an output layer with 1 neuron (o1)
 
 
@@ -50,6 +51,10 @@ def deriv_sigmoid(x):
     fx = sigmoid(x)
     return fx * (1 - fx)
 
+def softmax(z):
+    exps = np.exp(z - np.max(z))   # stability trick
+    return exps / np.sum(exps)
+
 
 # This function takes in np arrays of the same length and calculates
 # the square error for each sample and then finds the mean from those which is
@@ -68,24 +73,30 @@ class OurNeuralNetwork:
     '''
 
     def __init__(self):
-        # Grabbing dataset and formatting
-        mnist = fetch_openml('mnist_784', version=1, as_frame=False)
-        self.labels = mnist['target'].astype(np.int64)
-        self.data = mnist['data'] / 255.0
-    
-        # Weights and Biases
-        self.input_wb = np.random.normal(size=(2, INPUTS))
-        self.hidden_wb = np.random.normal(size=(2, 2, HIDDEN)) # weights/biases, layers, neurons
-        self.output_wb = np.random.normal(size=(2, 10))
-    
-    # TODO stuff below here
-    def feedforward(self, input):
+        # Weights
+        self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
+        self.weights2 = np.random.normal(size=(OUTPUTS, HIDDEN))
+
+        # Biases
+        self.bias1 = np.random.normal(size=(HIDDEN, 1))
+        self.bias2 = np.random.normal(size=(OUTPUTS, 1))
+
+    def feedforward(self, x):
         # x is a numpy array with 2 elements.
-        hidden1 = [sigmoid(sum(self.input_wb[0, i] * input[i] for i in range(INPUTS)) + self.input_wb[1, n]) for n in range(HIDDEN)] # TODO: probably copyish this, should pretty much be it
+
+        '''
         h1 = sigmoid(self.w1 * x[0] + self.w2 * x[1] + self.b1)
         h2 = sigmoid(self.w3 * x[0] + self.w4 * x[1] + self.b2)
         o1 = sigmoid(self.w5 * h1 + self.w6 * h2 + self.b3)
-        return o1
+        '''
+        # Hidden layer: h = sigmoid
+        z1 = self.weights1 @ x + self.bias1  # (4×784 @ 784×1) → (4×1)
+        h = sigmoid(z1)
+
+        # Output layer: z = W2*h + b2
+        z2 = self.weights2 @ h + self.bias2  # (10×4 @ 4×1) → (10×1)
+        o = softmax(z2)
+        return o.flatten()
 
     def train(self, data, all_y_trues):
         '''
