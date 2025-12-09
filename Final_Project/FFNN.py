@@ -36,7 +36,7 @@ SAMPLES_USED = 7000
 
 
 learn_rate = 0.1
-epochs = 10
+epochs = 100
 
 # Gets a value and calculates the sigmoid activation function
 # Returns this calculated value
@@ -130,19 +130,6 @@ class OurNeuralNetwork:
                 y_pred = y_pred.reshape(-1, 1)  # (10,1)
                 # --- Calculate partial derivatives.
                 # --- Naming: d_L_d_w1 represents "partial L / partial w1"
-                '''
-                d_L_d_ypred = -2 * (y_true - y_pred).reshape(-1, 1)
-
-
-                dL_dw2 = d_L_d_ypred.dot(h.T)  # shape (output_size, hidden_size)
-                dL_db2 = d_L_d_ypred
-                dL_dh = self.weights2.T.dot(d_L_d_ypred)  # shape (hidden_size,1)
-                dL_dz1 = dL_dh * deriv_sigmoid(z1).reshape(-1, 1)
-                dL_dw1 = dL_dz1.dot(x.T)  # shape (hidden_size, input_size)
-                dL_db1 = dL_dz1
-                '''
-
-
 
                 # 2. Output layer gradient
                 dL_dy = 2 * (y_pred - y_true)  # (10,1)
@@ -189,6 +176,135 @@ class OurNeuralNetwork:
 
         return mse_loss_trend_train, mse_loss_trend_cross_validation
     # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
+
+
+class TwoLayerNeuralNetwork:
+    '''
+    This code is an edit of the other nueral network in the code. It has been updated to use
+    two hidden layers.
+    '''
+
+    def __init__(self):
+        # Weights
+        self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
+        self.weights2 = np.random.normal(size=(HIDDEN, HIDDEN))
+        self.weights3 = np.random.normal(size=(OUTPUTS, HIDDEN))
+
+        # Biases
+        self.bias1 = np.random.normal(size=(HIDDEN, 1))
+        self.bias2 = np.random.normal(size=(HIDDEN, 1))
+        self.bias3 = np.random.normal(size=(OUTPUTS, 1))
+
+    def feedforward(self, x):
+        # x is a numpy array with 2 elements.
+        x = x.reshape(-1, 1)
+
+        # Hidden layer: h = sigmoid
+        z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+        h1 = sigmoid(z1)
+
+        z2 = self.weights2.dot(h1) + self.bias2
+        h2 = sigmoid(z2)
+
+        # Output layer: z = W2*h + b2
+        z3 = self.weights3.dot(h2) + self.bias3  # (10×4 @ 4×1) → (10×1)
+        o = softmax(z3)
+        return o.flatten()
+
+    def train(self, data, all_y_trues):
+        '''
+        - data is a (n x 2) numpy array, n = # of samples in the dataset.
+        - all_y_trues is a numpy array with n elements.
+          Elements in all_y_trues correspond to those in data.
+        '''
+
+        # Split the training set into actual train and cross-validation sets
+        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2, random_state=42)
+
+        mse_loss_trend_train = np.zeros((epochs))
+        mse_loss_trend_cross_validation = np.zeros((epochs))
+        epoch_counter = 0
+
+        for epoch in range(epochs):
+            for x, y_true in zip(data_train, y_train):
+                # 1. Ensure column vectors
+                x = x.reshape(-1, 1)  # (784,1)
+                y_true = y_true.reshape(-1, 1)  # (10,1)
+
+                # --- Do a feedforward (we'll need these values later)
+                # Hidden layer: h = sigmoid
+                z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+                h1 = sigmoid(z1)
+
+                z2 = self.weights2.dot(h1) + self.bias2
+                h2 = sigmoid(z2)
+
+                # Output layer: z = W2*h + b2
+                z3 = self.weights3.dot(h2) + self.bias3  # (10×4 @ 4×1) → (10×1)
+                o = softmax(z3)
+                y_pred = o
+                y_pred = y_pred.reshape(-1, 1)  # (10,1)
+                # --- Calculate partial derivatives.
+                # --- Naming: d_L_d_w1 represents "partial L / partial w1"
+
+
+                # Output layer gradient
+                dL_dy = 2 * (y_pred - y_true)  # (10,1)
+                dL_dw3 = dL_dy.dot(h2.T)  # (output_size, hidden_size) = (10,4)
+                dL_db3 = dL_dy  # (10,1)
+                dL_dh2 = self.weights3.T.dot(dL_dy)  # (hidden_size,1) = (4,1)
+
+                # 2nd Hidden layer gradient
+                dL_dz2 = dL_dh2 * deriv_sigmoid(z2)
+                dL_dw2 = dL_dz2.dot(h1.T)
+                dL_db2 = dL_dz2
+                dL_dh1 = self.weights2.T.dot(dL_dz2)
+
+                # 1st Hidden layer gradient
+                dL_dz1 = dL_dh1 * deriv_sigmoid(z1)
+                dL_dw1 = dL_dz1.dot(x.T)
+                dL_db1 = dL_dz1
+
+
+
+                # --- Update weights and biases
+                # Output layer
+                self.weights3 -= learn_rate * dL_dw3
+                self.bias3 -= learn_rate * dL_db3
+
+                # 2nd Hidden layer
+                self.weights2 -= learn_rate * dL_dw2
+                self.bias2 -= learn_rate * dL_db2
+
+                # 1st Hidden layer
+                self.weights1 -= learn_rate * dL_dw1
+                self.bias1 -= learn_rate * dL_db1
+
+            # Feedforward pass on actual train set -> MSE loss on train
+            y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
+
+            mse_loss_trend_train[epoch_counter] = mse_loss(y_train, y_preds)
+
+            # Feedforward pass on CV set -> MSE loss on CV set
+            y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
+            mse_loss_trend_cross_validation[epoch_counter] = mse_loss(y_cross_valid, y_preds_cross_valid)
+            epoch_counter += 1
+
+            '''
+            # --- Calculate total loss at the end of each 10 epochs
+            if epoch % 10 == 0:
+                y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
+                loss = mse_loss(y_train, y_preds)
+                print("Epoch %d loss: %.3f" % (epoch, loss))
+            '''
+            # Changed because there was really no change after 10 epochs
+            y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
+            loss = mse_loss(y_train, y_preds)
+            print("Epoch %d loss: %.3f" % (epoch, loss))
+
+        return mse_loss_trend_train, mse_loss_trend_cross_validation
+    # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
+
 
 # Displays the side by side of two matrices, made for before and after scaling
 def display_sbs_plots(before_matrix, after_matrix):
@@ -242,6 +358,31 @@ def display_mean_cov(before_matrix, after_matrix):
 def one_hot(y, num_classes=10):
     return np.eye(num_classes)[y]
 
+def train_and_plot_network(network, x_train, y_train, x_test, y_test):
+    # Call training function on our neural network, giving training data and labels as inputs
+    mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
+    plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
+    plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
+    plt.xlabel('Epochs')
+    plt.ylabel('MSE Loss')
+    plt.legend()
+
+    #all_y_predicted_soft = np.zeros((y_test.size))
+    all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, x_test)
+    all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
+    y_test_labels = np.argmax(y_test, axis=1)
+
+    print("Test balanced accuracy: ", balanced_accuracy_score(y_test_labels, all_y_predicted_hard))
+
+    cm = confusion_matrix(y_test_labels, all_y_predicted_hard)
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot()
+    plt.title('Confusion Matrix')
+    plt.show()
+
+    plt.show()
+
 def main():
     #df = generate_clusters()
 
@@ -288,31 +429,17 @@ def main():
     mse_loss_trend = np.zeros((epochs))
 
     # Create Neural Network Object
-    network = OurNeuralNetwork()
+    one_layer_network = OurNeuralNetwork()
 
-    # Call training function on our neural network, giving training data and labels as inputs
-    mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
-    plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
-    plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
-    plt.xlabel('Epochs')
-    plt.ylabel('MSE Loss')
-    plt.legend()
+    two_layer_network = TwoLayerNeuralNetwork()
 
-    #all_y_predicted_soft = np.zeros((y_test.size))
-    all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, x_test)
-    all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
-    y_test_labels = np.argmax(y_test, axis=1)
 
-    print("Test balanced accuracy: ", balanced_accuracy_score(y_test_labels, all_y_predicted_hard))
 
-    cm = confusion_matrix(y_test_labels, all_y_predicted_hard)
+    # train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
 
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-    disp.plot()
-    plt.title('Confusion Matrix')
-    plt.show()
+    train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
-    plt.show()
+
 
 
 # Code execution starts here
