@@ -29,13 +29,13 @@ from sklearn.model_selection import train_test_split
 
 # A neural network with:
 INPUTS = 784
-HIDDEN = 400
+HIDDEN = 40
 OUTPUTS = 10
-SAMPLES_USED = 7000
+SAMPLES_USED = 2100
     #  - an output layer with 1 neuron (o1)
 
 
-learn_rate = 0.1
+learn_rate = 0.12
 epochs = 100
 
 # Gets a value and calculates the sigmoid activation function
@@ -74,17 +74,16 @@ class OurNeuralNetwork:
     '''
 
     def __init__(self):
-        # Weights:
-        # - weights1: (400, 784) -> For input and hidden layers
-        # - weights2: (10, 400) -> For hidden to output layers
+
+
+        # Weights
         self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
         self.weights2 = np.random.normal(size=(OUTPUTS, HIDDEN))
 
         # Biases
-        # - bias1: (400, 1) -> For hidden layers
-        # - bias2: (10, 1) -> For output layer
         self.bias1 = np.random.normal(size=(HIDDEN, 1))
         self.bias2 = np.random.normal(size=(OUTPUTS, 1))
+
 
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
@@ -115,41 +114,41 @@ class OurNeuralNetwork:
 
         for epoch in range(epochs):
             for x, y_true in zip(data_train, y_train):
-                # 1. Ensure column vectors
-                x = x.reshape(-1, 1)  # (784,1)
-                y_true = y_true.reshape(-1, 1)  # (10,1)
 
-                # --- Do a feedforward (we'll need these values later)
-                # Hidden layer: h = sigmoid
-                z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+                x = x.reshape(-1, 1)
+                y_true = y_true.reshape(-1, 1)
+
+                # Hidden layer
+                z1 = self.weights1.dot(x) + self.bias1
                 h = sigmoid(z1)
 
-                sum_o1 = self.weights2.dot(h) + self.bias2  # (10×4 @ 4×1) → (10×1)
+                # Output layer
+                sum_o1 = self.weights2.dot(h) + self.bias2
                 o = softmax(sum_o1)
                 y_pred = o
-                y_pred = y_pred.reshape(-1, 1)  # (10,1)
+                y_pred = y_pred.reshape(-1, 1)
+
                 # --- Calculate partial derivatives.
                 # --- Naming: d_L_d_w1 represents "partial L / partial w1"
+                # Stochastic Gradient Descent for output layer
+                dL_dy = 2 * (y_pred - y_true)
+                dL_dw2 = dL_dy.dot(h.T)
+                dL_db2 = dL_dy
+                dL_dh = self.weights2.T.dot(dL_dy)
 
-                # 2. Output layer gradient
-                dL_dy = 2 * (y_pred - y_true)  # (10,1)
-                dL_dw2 = dL_dy @ h.T  # (output_size, hidden_size) = (10,4)
-                dL_db2 = dL_dy  # (10,1)
-                dL_dh = self.weights2.T @ dL_dy  # (hidden_size,1) = (4,1)
-
-                # 3. Hidden layer gradient
-                dL_dz1 = dL_dh * deriv_sigmoid(z1)  # elementwise multiplication (4,1)
-                dL_dw1 = dL_dz1 @ x.T  # (hidden_size, input_size) = (4,784)
-                dL_db1 = dL_dz1  # (4,1)
+                # Stochastic Gradient Descent for hidden layer
+                dL_dz1 = dL_dh * deriv_sigmoid(z1)
+                dL_dw1 = dL_dz1.dot(x.T)
+                dL_db1 = dL_dz1
 
                 # --- Update weights and biases
                 # Output layer
                 self.weights2 -= learn_rate * dL_dw2
-                self.bias2 -= learn_rate * dL_db2  # shape matches (output_size,1)
+                self.bias2 -= learn_rate * dL_db2
 
                 # Hidden layer
                 self.weights1 -= learn_rate * dL_dw1
-                self.bias1 -= learn_rate * dL_db1  # shape matches (hidden_size,1)
+                self.bias1 -= learn_rate * dL_db1
 
             # Feedforward pass on actual train set -> MSE loss on train
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
@@ -184,16 +183,23 @@ class TwoLayerNeuralNetwork:
     two hidden layers.
     '''
 
-    def __init__(self):
+    def __init__(self, hidden, learning_rate):
+
+        self.hidden = hidden
+
         # Weights
-        self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
-        self.weights2 = np.random.normal(size=(HIDDEN, HIDDEN))
-        self.weights3 = np.random.normal(size=(OUTPUTS, HIDDEN))
+        self.weights1 = np.random.normal(size=(self.hidden, INPUTS))
+        self.weights2 = np.random.normal(size=(self.hidden, self.hidden))
+        self.weights3 = np.random.normal(size=(OUTPUTS, self.hidden))
 
         # Biases
-        self.bias1 = np.random.normal(size=(HIDDEN, 1))
-        self.bias2 = np.random.normal(size=(HIDDEN, 1))
+        self.bias1 = np.random.normal(size=(self.hidden, 1))
+        self.bias2 = np.random.normal(size=(self.hidden, 1))
         self.bias3 = np.random.normal(size=(OUTPUTS, 1))
+
+        self.learning_rate = learning_rate
+
+
 
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
@@ -269,16 +275,16 @@ class TwoLayerNeuralNetwork:
 
                 # --- Update weights and biases
                 # Output layer
-                self.weights3 -= learn_rate * dL_dw3
-                self.bias3 -= learn_rate * dL_db3
+                self.weights3 -= self.learning_rate * dL_dw3
+                self.bias3 -= self.learning_rate * dL_db3
 
                 # 2nd Hidden layer
-                self.weights2 -= learn_rate * dL_dw2
-                self.bias2 -= learn_rate * dL_db2
+                self.weights2 -= self.learning_rate * dL_dw2
+                self.bias2 -= self.learning_rate * dL_db2
 
                 # 1st Hidden layer
-                self.weights1 -= learn_rate * dL_dw1
-                self.bias1 -= learn_rate * dL_db1
+                self.weights1 -= self.learning_rate * dL_dw1
+                self.bias1 -= self.learning_rate * dL_db1
 
             # Feedforward pass on actual train set -> MSE loss on train
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
@@ -372,7 +378,9 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
     y_test_labels = np.argmax(y_test, axis=1)
 
-    print("Test balanced accuracy: ", balanced_accuracy_score(y_test_labels, all_y_predicted_hard))
+    balanced_accuracy = balanced_accuracy_score(y_test_labels, all_y_predicted_hard)
+
+    print("Test balanced accuracy: ", balanced_accuracy)
 
     cm = confusion_matrix(y_test_labels, all_y_predicted_hard)
 
@@ -382,6 +390,68 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     plt.show()
 
     plt.show()
+
+    return balanced_accuracy
+
+def peak_balanced_accuracy(x, y):
+    max_balanced_accuracy = 0.0
+    peak_learning_rate = 0
+    peak_nuerons = 0
+
+    iteration = 0
+    # Testing Network for performance over learning rate and nuerons per layer
+    for i in np.arange(0.10, 0.25, 0.01):
+        for j in np.arange(10, 310, 20):
+            print(f"Iteration {iteration}")
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+            # Changes training and test labels from a single column to one-hot vectors
+            y_train = one_hot(y_train, 10)
+            y_test = one_hot(y_test, 10)
+
+            two_layer_network = TwoLayerNeuralNetwork(j, i)
+
+            balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+
+            if balanced_accuracy > max_balanced_accuracy:
+                max_balanced_accuracy = balanced_accuracy
+                peak_learning_rate = i
+                peak_nuerons = j
+
+            iteration += 1
+
+    print(
+        f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
+
+def peak_learn_rate(x, y):
+    peak_learning_rate = 0
+
+    balanced_accuracy_trend = []
+
+    for i in np.arange(0.10, 0.25, 0.01):
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+        # Changes training and test labels from a single column to one-hot vectors
+        y_train = one_hot(y_train, 10)
+        y_test = one_hot(y_test, 10)
+
+
+        two_layer_network = TwoLayerNeuralNetwork(HIDDEN, i)
+
+        balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+
+        balanced_accuracy_trend.append(balanced_accuracy)
+
+    plt.plot(balanced_accuracy_trend, color='b', label="Balanced Accuracy")
+    plt.xlim(0, 15)
+    plt.xlabel('Learning rate, 0.01 times x-value above 0.1')
+    plt.ylabel('Balanced Accuracy')
+    plt.legend()
+
+    plt.show()
+
+
+
 
 def main():
     #df = generate_clusters()
@@ -428,18 +498,63 @@ def main():
     # Instantiate MSE loss trend matrix
     mse_loss_trend = np.zeros((epochs))
 
-    # Create Neural Network Object
-    one_layer_network = OurNeuralNetwork()
-
-    two_layer_network = TwoLayerNeuralNetwork()
-
-
-
+    # Create Single Layer Neural Network and trains and plots it
+    # one_layer_network = OurNeuralNetwork()
     # train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
 
-    train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+
+    # Runs through iterations and returns best learning rate and nuerons
+    # to gives the best balanced accuracy
+    # peak_balanced_accuracy(x, y)
+
+    # Runs through iterations to get the best learning rate
+    # peak_learn_rate(x, y)
 
 
+    two_layer_network1 = TwoLayerNeuralNetwork(130, 0.1)
+
+    # two_layer_network2 = TwoLayerNeuralNetwork(70, 0.12)
+
+    train_and_plot_network(two_layer_network1, x_train, y_train, x_test, y_test)
+
+    # train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
+
+
+
+    # Code to try to get a 3D graph for looking for the best balanced accuracy
+    # based on hidden nuerons and learning rate
+    '''
+    # Our 2-dimensional distribution will be over variables X and Y
+    N = 15  # Number of ticks on X, Y axes
+    X = np.linspace(0.1, 0.25, N)
+    Y = np.linspace(10, 160, N)
+    X, Y = np.meshgrid(X, Y)
+
+    Z = np.zeros((15, 15))
+
+    # Pack X and Y into a single 3-dimensional array
+    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
+    pos[:, :, 0] = X
+    pos[:, :, 1] = Y
+    X, Y = np.meshgrid(X, Y)
+
+
+    # Adds the information to the contour plot and shows the plot
+    plt.contourf(X, Y, Z)
+    plt.title("Balanced Accuracy over learning rate and hidden layer size")
+    plt.show()
+    
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot_surface(X, Y, Z, cmap='viridis')
+
+    ax.set_xlabel("Learning Rate")
+    ax.set_ylabel("Hidden Layer Neurons")
+    ax.set_zlabel("Loss")
+
+    plt.show()
+    '''
 
 
 # Code execution starts here
