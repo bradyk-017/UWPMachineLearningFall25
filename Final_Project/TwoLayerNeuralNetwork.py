@@ -171,6 +171,8 @@ class TwoLayerNeuralNetwork:
 
             # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
+
+            # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             mse_losses_cv[epoch] = mse_loss(y_cross_valid, y_preds_cross_valid)
 
             # Changed because there was really no change after 10 epochs
