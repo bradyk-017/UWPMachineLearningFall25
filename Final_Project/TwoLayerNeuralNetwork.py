@@ -1,22 +1,21 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-
 # A neural network with:
 INPUTS = 784
 OUTPUTS = 10
 SAMPLES_USED = 2100
-#  - an output layer with 1 neuron (o1)
 
 epochs = 100
 
+learn_rate = 0.12
+max_epoch = 100
 
 # Gets a value and calculates the sigmoid activation function
 # Returns this calculated value
 def sigmoid(x):
     # Sigmoid activation function: f(x) = 1 / (1 + e^(-x))
     return 1 / (1 + np.exp(-x))
-
 
 # Gets a value and calculates to the derivative of sigmoid
 # Returns the calculated value
@@ -25,11 +24,9 @@ def deriv_sigmoid(x):
     fx = sigmoid(x)
     return fx * (1 - fx)
 
-
 def softmax(z):
     exps = np.exp(z - np.max(z))  # stability trick
     return exps / np.sum(exps)
-
 
 # This function takes in np arrays of the same length and calculates
 # the square error for each sample and then finds the mean from those which is
@@ -38,14 +35,24 @@ def mse_loss(y_true, y_pred):
     # y_true and y_pred are numpy arrays of the same length.
     return ((y_true - y_pred) ** 2).mean()
 
+# Moving average difference function
+# num_elements to use with np arrays: considers elements to be only num_elements long
+def moving_avg_diff(elements, window_size, num_elements):
+    if num_elements < 12:
+        # Simply return average if less elements than the window size
+        return sum(elements)/num_elements
+    else:
+        diff = 0
+        # Calculate moving sum of differences
+        for i in range(1, window_size):
+            diff += abs(elements[num_elements - i] - elements[num_elements - i + 1])
 
+        # Return average of 
+        return diff / (window_size - 1)
 
 class TwoLayerNeuralNetwork:
-    '''
-    This code is an edit of the other nueral network in the code. It has been updated to use
-    two hidden layers.
-    '''
-
+    # This code is an edit of the other nueral network in the code.
+    # It has been updated to use two hidden layers.
     def __init__(self, hidden, learning_rate):
 
         # Instantiate number of hidden layers
@@ -92,28 +99,19 @@ class TwoLayerNeuralNetwork:
         return o.flatten()
 
     def train(self, data, all_y_trues):
-        '''
-        - data is a (n x 2) numpy array, n = # of samples in the dataset.
-        - all_y_trues is a numpy array with n elements.
-          Elements in all_y_trues correspond to those in data.
-        '''
-
         # Split the training set into actual train and cross-validation sets
-        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2,
-                                                                                random_state=42)
-        # Create an array to track MSE loss for training set
-        mse_loss_trend_train = np.zeros((epochs))
+        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(
+            data, all_y_trues, test_size=0.2, random_state=42
+        )
 
-        # Create an array to track MSE loss for training set
-        mse_loss_trend_cross_validation = np.zeros((epochs))
+        mse_losses_training = np.zeros(max_epoch)
+        mse_losses_cv = np.zeros(max_epoch)
 
-        # Epoch tracking
-        epoch_counter = 0
-
-        # threshold for stopping condition
-        threshold = .0001
-
-        for epoch in range(epochs):
+        epoch = 0
+        stop = False
+        # Continue iterating while the moving average of MSE loss is
+        # above the threshold and not hit max epochs
+        while not stop and epoch < max_epoch:
             for x, y_true in zip(data_train, y_train):
                 # 1. Ensure column vectors
                 x = x.reshape(-1, 1)  # (784,1)
@@ -173,27 +171,16 @@ class TwoLayerNeuralNetwork:
 
             # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
+            mse_losses_cv[epoch] = mse_loss(y_cross_valid, y_preds_cross_valid)
 
-            # Calculate and insert MSE Loss on CV set for current epoch
-            mse_loss_trend_cross_validation[epoch_counter] = mse_loss(y_cross_valid, y_preds_cross_valid)
-
-            # Stopping condition that uses a threshold defined at the start of the function
-            if np.abs(mse_loss_trend_cross_validation[epoch_counter] - mse_loss_trend_cross_validation[
-                epoch_counter - 1]) < threshold:
-                break
-            epoch_counter += 1
-
-            '''
-            # --- Calculate total loss at the end of each 10 epochs
-            if epoch % 10 == 0:
-                y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
-                loss = mse_loss(y_train, y_preds)
-                print("Epoch %d loss: %.3f" % (epoch, loss))
-            '''
             # Changed because there was really no change after 10 epochs
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
             loss = mse_loss(y_train, y_preds)
             print("Epoch %d loss: %.3f" % (epoch, loss))
 
-        return mse_loss_trend_train, mse_loss_trend_cross_validation
-    # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
+            # Stop condition
+            if epoch >= 12:
+                stop = moving_avg_diff(mse_losses_cv, 5, epoch) < 0.0015
+
+            epoch += 1
+        return mse_losses_training[:epoch], mse_losses_cv[:epoch]

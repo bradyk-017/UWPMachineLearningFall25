@@ -263,12 +263,11 @@ def main():
     # peak_learn_rate(x, y)
 
     two_layer_network1 = TwoLayerNeuralNetwork(130, 0.1)
-
-    two_layer_network2 = TwoLayerNeuralNetwork(70, 0.12)
+    #two_layer_network2 = TwoLayerNeuralNetwork(70, 0.12)
 
     train_and_plot_network(two_layer_network1, x_train, y_train, x_test, y_test)
 
-    train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
+    #train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate
@@ -308,6 +307,7 @@ def main():
     plt.show()
     '''
 
+    #train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
 
 # Code execution starts here
 if __name__ == "__main__":
