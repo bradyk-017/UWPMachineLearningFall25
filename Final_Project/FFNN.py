@@ -99,23 +99,35 @@ def one_hot(y, num_classes=10):
 def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     # Call training function on our neural network, giving training data and labels as inputs
     mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
+
+    # Generate a MSE Loss line plot for the training set
     plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
+
+    # Generate a MSE line plot for the CV set
     plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
     plt.xlabel('Epochs')
     plt.ylabel('MSE Loss')
     plt.legend()
 
-    # all_y_predicted_soft = np.zeros((y_test.size))
+    # Create an array from the soft score predictions form the Neural Network
     all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, x_test)
+
+    # Use argmax to create hard predictions from the soft predictions (probabilities)
     all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
+
+    # ?????
     y_test_labels = np.argmax(y_test, axis=1)
 
+    # Pass ground-truth labels and predicted hard labels to calculate UAR
     balanced_accuracy = balanced_accuracy_score(y_test_labels, all_y_predicted_hard)
 
+    # Print UAR
     print("Test balanced accuracy: ", balanced_accuracy)
 
+    # Generate confusion matrix from ground-truth labels and hard predicted labels
     cm = confusion_matrix(y_test_labels, all_y_predicted_hard)
 
+    # Display generated confusion matrix
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot()
     plt.title('Confusion Matrix')
@@ -185,6 +197,9 @@ def peak_learn_rate(x, y):
 
 
 def main():
+    '''
+    # Old code from skeleton code
+
     # df = generate_clusters()
 
     # print(df)
@@ -193,6 +208,7 @@ def main():
     # y = df['target']
 
     # x = x.to_numpy()
+    '''
 
     # Grabbing dataset
     mnist = fetch_openml('mnist_784', version=1, as_frame=False)
@@ -206,13 +222,20 @@ def main():
     # normalize pixels to either black or white
     x = x / 255.0
 
+    '''
+    # Old code from skeleton code
+    
     # scaler = StandardScaler()
     # scaled_df = scaler.fit_transform(df)
     # scaled_df_no_labels = scaled_df[:, :2]
 
     # display_sbs_plots(x, scaled_df_no_labels)
     # display_mean_cov(x, scaled_df_no_labels)
-    print(x.shape)
+    '''
+
+    # print(x.shape) <-- Debugging? DELETE?
+
+
     # Running less of the data so it runs faster
     x = x[:SAMPLES_USED, :]
     y = y[:SAMPLES_USED]
@@ -249,7 +272,10 @@ def main():
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate
+
     '''
+    # Old code from skeleton code
+    
     # Our 2-dimensional distribution will be over variables X and Y
     N = 15  # Number of ticks on X, Y axes
     X = np.linspace(0.1, 0.25, N)
