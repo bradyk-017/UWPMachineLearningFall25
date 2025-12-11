@@ -3,9 +3,10 @@ from sklearn.model_selection import train_test_split
 
 # A neural network with:
 INPUTS = 784
-HIDDEN = 40
 OUTPUTS = 10
 SAMPLES_USED = 2100
+
+epochs = 100
 
 learn_rate = 0.12
 max_epoch = 100
@@ -53,33 +54,47 @@ class TwoLayerNeuralNetwork:
     # This code is an edit of the other nueral network in the code.
     # It has been updated to use two hidden layers.
     def __init__(self, hidden, learning_rate):
+
+        # Instantiate number of hidden layers
         self.hidden = hidden
 
-        # Weights
+        # Instantiate learning rate
+        self.learning_rate = learning_rate
+
+        # Stage 1 (INPUTS --> HIDDEN LAYER) weights
         self.weights1 = np.random.normal(size=(self.hidden, INPUTS))
+
+        # Stage 2 (HIDDEN LAYER 1 --> HIDDEN LAYER 2) weights
         self.weights2 = np.random.normal(size=(self.hidden, self.hidden))
+
+        # Stage 3 (HIDDEN LAYER 2 --> OUTPUT) weights
         self.weights3 = np.random.normal(size=(OUTPUTS, self.hidden))
 
-        # Biases
+        # Stage 1 (INPUTS --> HIDDEN LAYER) biases
         self.bias1 = np.random.normal(size=(self.hidden, 1))
+
+        # Stage 2 (HIDDEN LAYER 1 --> HIDDEN LAYER 2) biases
         self.bias2 = np.random.normal(size=(self.hidden, 1))
+
+        # Stage 3 (HIDDEN LAYER 2 --> OUTPUT) biases
         self.bias3 = np.random.normal(size=(OUTPUTS, 1))
 
-        self.learning_rate = learning_rate
 
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
+        # -1 --> Collapse by one dimension
         x = x.reshape(-1, 1)
 
-        # Hidden layer: h = sigmoid
-        z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+        # Hidden layer: h (activation function) = sigmoid
+        z1 = self.weights1.dot(x) + self.bias1  # [4×784] @ [784×1] → [4×1]
         h1 = sigmoid(z1)
 
+        # Output layer: z2 = W2*h1 + b2
         z2 = self.weights2.dot(h1) + self.bias2
         h2 = sigmoid(z2)
 
-        # Output layer: z = W2*h + b2
-        z3 = self.weights3.dot(h2) + self.bias3  # (10×4 @ 4×1) → (10×1)
+        # Output layer: z3 = W3*h2 + b3
+        z3 = self.weights3.dot(h2) + self.bias3  # [10×4] @ [4×1] → [10×1]
         o = softmax(z3)
         return o.flatten()
 
@@ -102,16 +117,16 @@ class TwoLayerNeuralNetwork:
                 x = x.reshape(-1, 1)  # (784,1)
                 y_true = y_true.reshape(-1, 1)  # (10,1)
 
-                # --- Do a feedforward (we'll need these values later)
+                # Perform one pass of feedfoward() pass manually as some of the values are needed later
                 # Hidden layer: h = sigmoid
-                z1 = self.weights1.dot(x) + self.bias1  # (4×784 @ 784×1) → (4×1)
+                z1 = self.weights1.dot(x) + self.bias1  # [4×784] @ [784×1] → [4×1]
                 h1 = sigmoid(z1)
 
                 z2 = self.weights2.dot(h1) + self.bias2
                 h2 = sigmoid(z2)
 
                 # Output layer: z = W2*h + b2
-                z3 = self.weights3.dot(h2) + self.bias3  # (10×4 @ 4×1) → (10×1)
+                z3 = self.weights3.dot(h2) + self.bias3  # [10×4] @ [4×1] → [10×1]
                 o = softmax(z3)
                 y_pred = o
                 y_pred = y_pred.reshape(-1, 1)  # (10,1)
@@ -136,23 +151,25 @@ class TwoLayerNeuralNetwork:
                 dL_db1 = dL_dz1
 
                 # --- Update weights and biases
-                # Output layer
+                # Stage 3 (HIDDEN LAYER 2 --> OUTPUT) weights & biases
                 self.weights3 -= self.learning_rate * dL_dw3
                 self.bias3 -= self.learning_rate * dL_db3
 
-                # 2nd Hidden layer
+                # Stage 2 (HIDDEN LAYER 1 --> HIDDEN LAYER 2) weights & biases
                 self.weights2 -= self.learning_rate * dL_dw2
                 self.bias2 -= self.learning_rate * dL_db2
 
-                # 1st Hidden layer
+                # Stage 1 (INPUTS --> HIDDEN LAYER) weights & biases
                 self.weights1 -= self.learning_rate * dL_dw1
                 self.bias1 -= self.learning_rate * dL_db1
 
-            # Feedforward pass on training data set -> MSE loss on training data
+            # Feedforward pass on actual training set -> Generates data for calculating MSE Loss
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
-            mse_losses_training[epoch] = mse_loss(y_train, y_preds)
 
-            # Feedforward pass on CV set -> MSE loss on CV set
+            # Calculate and insert MSE Loss on training set for current epoch
+            mse_loss_trend_train[epoch_counter] = mse_loss(y_train, y_preds)
+
+            # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
             mse_losses_cv[epoch] = mse_loss(y_cross_valid, y_preds_cross_valid)
 
