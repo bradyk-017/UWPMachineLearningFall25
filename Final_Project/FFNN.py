@@ -32,11 +32,12 @@ INPUTS = 784
 HIDDEN = 40
 OUTPUTS = 10
 SAMPLES_USED = 2100
-    #  - an output layer with 1 neuron (o1)
+#  - an output layer with 1 neuron (o1)
 
 
 learn_rate = 0.12
 epochs = 100
+
 
 # Gets a value and calculates the sigmoid activation function
 # Returns this calculated value
@@ -52,8 +53,9 @@ def deriv_sigmoid(x):
     fx = sigmoid(x)
     return fx * (1 - fx)
 
+
 def softmax(z):
-    exps = np.exp(z - np.max(z))   # stability trick
+    exps = np.exp(z - np.max(z))  # stability trick
     return exps / np.sum(exps)
 
 
@@ -75,7 +77,6 @@ class OurNeuralNetwork:
 
     def __init__(self):
 
-
         # Weights
         self.weights1 = np.random.normal(size=(HIDDEN, INPUTS))
         self.weights2 = np.random.normal(size=(OUTPUTS, HIDDEN))
@@ -83,7 +84,6 @@ class OurNeuralNetwork:
         # Biases
         self.bias1 = np.random.normal(size=(HIDDEN, 1))
         self.bias2 = np.random.normal(size=(OUTPUTS, 1))
-
 
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
@@ -106,7 +106,8 @@ class OurNeuralNetwork:
         '''
 
         # Split the training set into actual train and cross-validation sets
-        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2, random_state=42)
+        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2,
+                                                                                random_state=42)
 
         mse_loss_trend_train = np.zeros((epochs))
         mse_loss_trend_cross_validation = np.zeros((epochs))
@@ -114,7 +115,6 @@ class OurNeuralNetwork:
 
         for epoch in range(epochs):
             for x, y_true in zip(data_train, y_train):
-
                 x = x.reshape(-1, 1)
                 y_true = y_true.reshape(-1, 1)
 
@@ -172,7 +172,6 @@ class OurNeuralNetwork:
             loss = mse_loss(y_train, y_preds)
             print("Epoch %d loss: %.3f" % (epoch, loss))
 
-
         return mse_loss_trend_train, mse_loss_trend_cross_validation
     # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
 
@@ -199,8 +198,6 @@ class TwoLayerNeuralNetwork:
 
         self.learning_rate = learning_rate
 
-
-
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
         x = x.reshape(-1, 1)
@@ -225,11 +222,14 @@ class TwoLayerNeuralNetwork:
         '''
 
         # Split the training set into actual train and cross-validation sets
-        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2, random_state=42)
+        data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2,
+                                                                                random_state=42)
 
         mse_loss_trend_train = np.zeros((epochs))
         mse_loss_trend_cross_validation = np.zeros((epochs))
         epoch_counter = 0
+        #threshold for stopping condition
+        threshold = .0001
 
         for epoch in range(epochs):
             for x, y_true in zip(data_train, y_train):
@@ -253,7 +253,6 @@ class TwoLayerNeuralNetwork:
                 # --- Calculate partial derivatives.
                 # --- Naming: d_L_d_w1 represents "partial L / partial w1"
 
-
                 # Output layer gradient
                 dL_dy = 2 * (y_pred - y_true)  # (10,1)
                 dL_dw3 = dL_dy.dot(h2.T)  # (output_size, hidden_size) = (10,4)
@@ -271,8 +270,6 @@ class TwoLayerNeuralNetwork:
                 dL_dw1 = dL_dz1.dot(x.T)
                 dL_db1 = dL_dz1
 
-
-
                 # --- Update weights and biases
                 # Output layer
                 self.weights3 -= self.learning_rate * dL_dw3
@@ -286,6 +283,8 @@ class TwoLayerNeuralNetwork:
                 self.weights1 -= self.learning_rate * dL_dw1
                 self.bias1 -= self.learning_rate * dL_db1
 
+
+
             # Feedforward pass on actual train set -> MSE loss on train
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
 
@@ -294,6 +293,10 @@ class TwoLayerNeuralNetwork:
             # Feedforward pass on CV set -> MSE loss on CV set
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
             mse_loss_trend_cross_validation[epoch_counter] = mse_loss(y_cross_valid, y_preds_cross_valid)
+            
+            #Stopping condition that uses a threshold defined at the start of the function
+            if np.abs(mse_loss_trend_cross_validation[epoch_counter] - mse_loss_trend_cross_validation[epoch_counter - 1]) < threshold:
+                break
             epoch_counter += 1
 
             '''
@@ -331,12 +334,14 @@ def display_sbs_plots(before_matrix, after_matrix):
 
     return
 
+
 # Takes in the matrix and returns the mean of the matrix and the cov matrix of the matrix
 def generate_mean_cov(matrix):
     mean_xy = np.mean(matrix, axis=0)
     cov = np.cov(matrix, rowvar=False)
 
     return mean_xy, cov
+
 
 # Takes the before and after matrix and displays the dataset mean and dataset covariance matrix of each
 def display_mean_cov(before_matrix, after_matrix):
@@ -360,9 +365,11 @@ def display_mean_cov(before_matrix, after_matrix):
 
     return
 
+
 # one hot vector
 def one_hot(y, num_classes=10):
     return np.eye(num_classes)[y]
+
 
 def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     # Call training function on our neural network, giving training data and labels as inputs
@@ -373,7 +380,7 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     plt.ylabel('MSE Loss')
     plt.legend()
 
-    #all_y_predicted_soft = np.zeros((y_test.size))
+    # all_y_predicted_soft = np.zeros((y_test.size))
     all_y_predicted_soft = np.apply_along_axis(network.feedforward, 1, x_test)
     all_y_predicted_hard = np.argmax(all_y_predicted_soft, axis=1)
     y_test_labels = np.argmax(y_test, axis=1)
@@ -392,6 +399,7 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     plt.show()
 
     return balanced_accuracy
+
 
 def peak_balanced_accuracy(x, y):
     max_balanced_accuracy = 0.0
@@ -423,6 +431,7 @@ def peak_balanced_accuracy(x, y):
     print(
         f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
 
+
 def peak_learn_rate(x, y):
     peak_learning_rate = 0
 
@@ -434,7 +443,6 @@ def peak_learn_rate(x, y):
         # Changes training and test labels from a single column to one-hot vectors
         y_train = one_hot(y_train, 10)
         y_test = one_hot(y_test, 10)
-
 
         two_layer_network = TwoLayerNeuralNetwork(HIDDEN, i)
 
@@ -451,46 +459,43 @@ def peak_learn_rate(x, y):
     plt.show()
 
 
-
-
 def main():
-    #df = generate_clusters()
+    # df = generate_clusters()
 
-    #print(df)
+    # print(df)
 
-    #x = df.drop('target', axis=1)
-    #y = df['target']
+    # x = df.drop('target', axis=1)
+    # y = df['target']
 
-    #x = x.to_numpy()
-    
-    # Grabbing dataset and formatting
+    # x = x.to_numpy()
+
+    # Grabbing dataset
     mnist = fetch_openml('mnist_784', version=1, as_frame=False)
 
     # Assign data -> x; Assign labels -> y;
-    x, y = mnist['data'], mnist['target'] 
+    x, y = mnist['data'], mnist['target']
 
     # Converting training labels to integers.
     y = y.astype(np.int64)
 
-    # Scaling down?
+    # normalize pixels to either black or white
     x = x / 255.0
 
-    #scaler = StandardScaler()
-    #scaled_df = scaler.fit_transform(df)
-    #scaled_df_no_labels = scaled_df[:, :2]
+    # scaler = StandardScaler()
+    # scaled_df = scaler.fit_transform(df)
+    # scaled_df_no_labels = scaled_df[:, :2]
 
-    #display_sbs_plots(x, scaled_df_no_labels)
-    #display_mean_cov(x, scaled_df_no_labels)
+    # display_sbs_plots(x, scaled_df_no_labels)
+    # display_mean_cov(x, scaled_df_no_labels)
     print(x.shape)
     # Running less of the data so it runs faster
     x = x[:SAMPLES_USED, :]
     y = y[:SAMPLES_USED]
 
-
     # Split the data into training data (x_train) and labels (y_train)
     # and a CV data (x_test) and labels (y_test)
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-    
+
     # Changes training and test labels from a single column to one-hot vectors
     y_train = one_hot(y_train, 10)
     y_test = one_hot(y_test, 10)
@@ -502,14 +507,12 @@ def main():
     # one_layer_network = OurNeuralNetwork()
     # train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
 
-
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
     # peak_balanced_accuracy(x, y)
 
     # Runs through iterations to get the best learning rate
     # peak_learn_rate(x, y)
-
 
     two_layer_network1 = TwoLayerNeuralNetwork(130, 0.1)
 
@@ -518,8 +521,6 @@ def main():
     train_and_plot_network(two_layer_network1, x_train, y_train, x_test, y_test)
 
     # train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
-
-
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate
@@ -543,7 +544,7 @@ def main():
     plt.contourf(X, Y, Z)
     plt.title("Balanced Accuracy over learning rate and hidden layer size")
     plt.show()
-    
+
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111, projection='3d')
 
