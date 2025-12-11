@@ -229,8 +229,8 @@ def main():
     mse_loss_trend = np.zeros((epochs))
 
     # Create Single Layer Neural Network and trains and plots it
-    # one_layer_network = OurNeuralNetwork()
-    # train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+    one_layer_network = OurNeuralNetwork()
+    train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
@@ -243,6 +243,44 @@ def main():
     #two_layer_network2 = TwoLayerNeuralNetwork(70, 0.12)
 
     train_and_plot_network(two_layer_network1, x_train, y_train, x_test, y_test)
+
+    train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
+
+    # Code to try to get a 3D graph for looking for the best balanced accuracy
+    # based on hidden nuerons and learning rate
+    '''
+    # Our 2-dimensional distribution will be over variables X and Y
+    N = 15  # Number of ticks on X, Y axes
+    X = np.linspace(0.1, 0.25, N)
+    Y = np.linspace(10, 160, N)
+    X, Y = np.meshgrid(X, Y)
+
+    Z = np.zeros((15, 15))
+
+    # Pack X and Y into a single 3-dimensional array
+    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
+    pos[:, :, 0] = X
+    pos[:, :, 1] = Y
+    X, Y = np.meshgrid(X, Y)
+
+
+    # Adds the information to the contour plot and shows the plot
+    plt.contourf(X, Y, Z)
+    plt.title("Balanced Accuracy over learning rate and hidden layer size")
+    plt.show()
+
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot_surface(X, Y, Z, cmap='viridis')
+
+    ax.set_xlabel("Learning Rate")
+    ax.set_ylabel("Hidden Layer Neurons")
+    ax.set_zlabel("Loss")
+
+    plt.show()
+    '''
+
     #train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
 
 # Code execution starts here
