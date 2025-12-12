@@ -32,7 +32,7 @@ from TwoLayerNeuralNetwork import TwoLayerNeuralNetwork
 # A neural network with:
 INPUTS = 784
 OUTPUTS = 10
-SAMPLES_USED = 2100
+SAMPLES_USED = 7000
 #  - an output layer with 1 neuron (o1)
 
 
@@ -228,6 +228,11 @@ def peak_balanced_accuracy(x, y, learn, hidden):
 
             balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
+            if balanced_accuracy > max_balanced_accuracy:
+                max_balanced_accuracy = balanced_accuracy
+                peak_learning_rate = i
+                peak_nuerons = j
+
 
             Z[int(i * 100) - 5, j] = balanced_accuracy
 
@@ -246,7 +251,7 @@ def peak_learn_rate(x, y, learn, hidden):
 
     balanced_accuracy_trend = []
 
-    for i in np.arange(learn[1], learn[2], learn[3]):
+    for i in np.arange(learn[0], learn[1], learn[2]):
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
         # Changes training and test labels from a single column to one-hot vectors
@@ -300,12 +305,14 @@ def main():
     # Instantiate MSE loss trend matrix
     mse_loss_trend = np.zeros((epochs))
 
-    learn_range = [0.10, 0.25, 0.1]
-    hidden_range = [10, 310, 20]
+    learn_range = [0.05, 0.20, 0.01]
+    hidden_range = [0, 15, 1]
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
-    peak_balanced_accuracy(x, y, learn_range, hidden_range)
+    # peak_balanced_accuracy(x, y, learn_range, hidden_range)
+    # peak_balanced_accuracy(x, y, learn_range, hidden_range)
+    peak_learn_rate(x, y, learn_range, 120)
 
     '''
     # Old testing code
@@ -338,7 +345,7 @@ def main():
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
-    peak_balanced_accuracy(x, y)
+    # peak_balanced_accuracy(x, y, learn_range, hidden_range)
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate
