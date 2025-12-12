@@ -136,11 +136,82 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
 
     return balanced_accuracy
 
+def graph_balanced_accuracy(Z):
+    peak_learning_rate = 0
+
+    # Code to try to get a 3D graph for looking for the best balanced accuracy
+    # based on hidden nuerons and learning rate
+    # Our 2-dimensional distribution will be over variables X and Y
+    N = 15  # Number of ticks on X, Y axes
+    X = np.linspace(0, 15, N)
+    Y = np.linspace(10, 310, N)
+    X, Y = np.meshgrid(X, Y)
+
+
+
+    # Pack X and Y into a single 3-dimensional array
+    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
+    pos[:, :, 0] = X
+    pos[:, :, 1] = Y
+    # X, Y = np.meshgrid(X, Y)
+
+
+    # Adds the information to the contour plot and shows the plot
+    plt.contourf(X, Y, Z)
+    plt.title("Balanced Accuracy over learning rate and hidden layer size")
+    plt.show()
+
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.plot_surface(X, Y, Z, cmap='viridis')
+
+    ax.set_xlim(ax.get_xlim()[::-1])  # reverse X
+    ax.set_ylim(ax.get_ylim()[::-1])  # reverse Y
+
+    ax.set_xlabel("Learning Rate")
+    ax.set_ylabel("Hidden Layer Neurons")
+    ax.set_zlabel("Balanced Accuracy")
+
+    plt.show()
+
+
+def graph_balanced_accuracy_heatmap(Z):
+    peak_learning_rate = 0
+    learning_rates = np.arange(0.10, 0.15, 0.01)        # 0.10–0.14 (5 values)
+    neurons = (np.arange(5) * 20)                       # 0, 20, 40, 60, 80
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    im = ax.imshow(Z, cmap='inferno', interpolation='bilinear', origin='lower')
+
+    # Label ticks with real values
+    ax.set_xticks(np.arange(len(neurons)))
+    ax.set_yticks(np.arange(len(learning_rates)))
+
+    ax.set_xticklabels(neurons)
+    ax.set_yticklabels(learning_rates)
+
+    ax.set_xlabel("Hidden Neurons")
+    ax.set_ylabel("Learning Rate")
+    ax.set_title("Balanced Accuracy Heatmap")
+
+    # Add numbers inside each cell
+    for i in range(Z.shape[0]):
+        for j in range(Z.shape[1]):
+            ax.text(j, i, f"{Z[i, j]:.2f}", ha="center", va="center", color="white")
+
+    fig.colorbar(im, ax=ax, label="Balanced Accuracy")
+    plt.show()
+
+
 
 def peak_balanced_accuracy(x, y, learn, hidden):
     max_balanced_accuracy = 0.0
     peak_learning_rate = 0
     peak_nuerons = 0
+
+    Z = np.zeros((15, 15))
 
     iteration = 0
     # Testing Network for performance over learning rate and nuerons per layer
@@ -153,16 +224,18 @@ def peak_balanced_accuracy(x, y, learn, hidden):
             y_train = one_hot(y_train, 10)
             y_test = one_hot(y_test, 10)
 
-            two_layer_network = TwoLayerNeuralNetwork(j, i)
+            two_layer_network = TwoLayerNeuralNetwork((j * 20) + 10, i)
 
             balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
-            if balanced_accuracy > max_balanced_accuracy:
-                max_balanced_accuracy = balanced_accuracy
-                peak_learning_rate = i
-                peak_nuerons = j
+
+            Z[int(i * 100) - 5, j] = balanced_accuracy
 
             iteration += 1
+
+    graph_balanced_accuracy(Z)
+
+    graph_balanced_accuracy_heatmap(Z)
 
     print(
         f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
@@ -265,45 +338,10 @@ def main():
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
-    # peak_balanced_accuracy(x, y)
+    peak_balanced_accuracy(x, y)
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate
-
-    '''
-    # Old code from skeleton code
-    
-    # Our 2-dimensional distribution will be over variables X and Y
-    N = 15  # Number of ticks on X, Y axes
-    X = np.linspace(0.1, 0.25, N)
-    Y = np.linspace(10, 160, N)
-    X, Y = np.meshgrid(X, Y)
-
-    Z = np.zeros((15, 15))
-
-    # Pack X and Y into a single 3-dimensional array
-    pos = np.empty(X.shape + (2,))  # size (N, N, 2)
-    pos[:, :, 0] = X
-    pos[:, :, 1] = Y
-    X, Y = np.meshgrid(X, Y)
-
-
-    # Adds the information to the contour plot and shows the plot
-    plt.contourf(X, Y, Z)
-    plt.title("Balanced Accuracy over learning rate and hidden layer size")
-    plt.show()
-
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.plot_surface(X, Y, Z, cmap='viridis')
-
-    ax.set_xlabel("Learning Rate")
-    ax.set_ylabel("Hidden Layer Neurons")
-    ax.set_zlabel("Loss")
-
-    plt.show()
-    '''
 
     #train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
 
