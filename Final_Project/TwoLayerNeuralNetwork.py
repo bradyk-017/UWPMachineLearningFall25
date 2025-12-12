@@ -167,7 +167,7 @@ class TwoLayerNeuralNetwork:
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
 
             # Calculate and insert MSE Loss on training set for current epoch
-            mse_loss_trend_train[epoch_counter] = mse_loss(y_train, y_preds)
+            mse_losses_training[epoch] = mse_loss(y_train, y_preds)
 
             # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
