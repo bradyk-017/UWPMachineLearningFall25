@@ -179,8 +179,8 @@ def graph_balanced_accuracy(Z):
 
 def graph_balanced_accuracy_heatmap(Z):
     peak_learning_rate = 0
-    learning_rates = np.arange(0.10, 0.15, 0.01)        # 0.10–0.14 (5 values)
-    neurons = (np.arange(5) * 20)                       # 0, 20, 40, 60, 80
+    learning_rates = np.arange(0.05, 0.20, 0.01)        # 0.10–0.14 (5 values)
+    neurons = (np.arange(10, 310, 20))                      # 0, 20, 40, 60, 80
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -225,9 +225,11 @@ def peak_balanced_accuracy(x, y, learn, hidden):
             y_train = one_hot(y_train, 10)
             y_test = one_hot(y_test, 10)
 
-            two_layer_network = TwoLayerNeuralNetwork((j * 20) + 10, i)
+            one_layer_network = OurNeuralNetwork((j * 20) + 10, i)
+            #two_layer_network = TwoLayerNeuralNetwork((j * 20) + 10, i)
 
-            balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+            balanced_accuracy = train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+            #balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
             if balanced_accuracy > max_balanced_accuracy:
                 max_balanced_accuracy = balanced_accuracy
@@ -244,7 +246,8 @@ def peak_balanced_accuracy(x, y, learn, hidden):
     graph_balanced_accuracy_heatmap(Z)
 
     print(
-        f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
+        f"Max balanced accuracy is {max_balanced_accuracy} "
+        f"with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
 
 
 def peak_learn_rate(x, y, learn: list[float], hidden: int):
@@ -259,9 +262,11 @@ def peak_learn_rate(x, y, learn: list[float], hidden: int):
         y_train = one_hot(y_train, 10)
         y_test = one_hot(y_test, 10)
 
-        two_layer_network = TwoLayerNeuralNetwork(hidden, i)
+        one_layer_network = OurNeuralNetwork(hidden, i)
+        #two_layer_network = TwoLayerNeuralNetwork(hidden, i)
 
-        balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+        balanced_accuracy = train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+        #balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
         balanced_accuracy_trend.append(balanced_accuracy)
 
@@ -286,14 +291,16 @@ def peak_hidden_layers(x, y, learn: float, hidden: list[int]):
         y_train = one_hot(y_train, 10)
         y_test = one_hot(y_test, 10)
 
-        two_layer_network = TwoLayerNeuralNetwork(i, learn)
+        one_layer_network = OurNeuralNetwork(i, learn)
+        #two_layer_network = TwoLayerNeuralNetwork(i, learn)
 
-        balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+        balanced_accuracy = train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+        #balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
         balanced_accuracy_trend.append(balanced_accuracy)
 
-    plt.plot(list(range(10, 320, 20)), balanced_accuracy_trend, color='b', label="Balanced Accuracy")
-    plt.xlim(10, 310)
+    plt.plot( list(range(hidden[0], hidden[1], 20)), balanced_accuracy_trend, color='b', label="Balanced Accuracy")
+    plt.xlim(hidden[0], hidden[1])
     plt.title('Balanced Accuracy w/ Hidden Neuron Sweep')
     plt.xlabel('Number of hidden neurons per layer')
     plt.ylabel('Balanced Accuracy')
@@ -326,7 +333,7 @@ def main():
     y = y.astype(np.int64)
 
     # normalize pixels to either black or white
-    x = x / 255.0
+    #x = x / 255.0
     # Running less of the data so it runs faster
     x = x[:SAMPLES_USED, :]
     y = y[:SAMPLES_USED]
@@ -335,14 +342,30 @@ def main():
     mse_loss_trend = np.zeros((epochs))
 
     learn_range = [0.05, 0.20, 0.01]
-    hidden_range = [0, 15, 1]
+    hidden_range_single = [10,320, 20]
+    hidden_range_double = [0, 15, 1]
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
-    # peak_balanced_accuracy(x, y, learn_range, hidden_range)
-    # peak_balanced_accuracy(x, y, learn_range, hidden_range)
-    peak_learn_rate(x, y, learn_range, 120)
-    #peak_hidden_layers(x, y, learn_range[2], hidden_range)
+
+    # peak_balanced_accuracy(x, y, learn_range, hidden_range_double)
+    # peak_learn_rate(x, y, learn_range, 120)
+    # peak_hidden_layers(x, y, learn_range[2], hidden_range_single)
+
+    # Split the data into training data (x_train) and label (y_train) sets
+    # and Test data (x_test) and label (y_test) sets
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+    # Changes training and test labels from a single column to one-hot vectors
+    y_train = one_hot(y_train, 10)
+    y_test = one_hot(y_test, 10)
+
+    # Create Single Layer Neural Network and trains and plots it
+    one_layer_network = OurNeuralNetwork(120, learn_range[1])
+    train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+
+    two_layer_network = TwoLayerNeuralNetwork(120, learn_range[1])
+    train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
     '''
     # Old testing code

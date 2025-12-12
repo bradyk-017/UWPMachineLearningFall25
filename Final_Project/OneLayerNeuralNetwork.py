@@ -7,7 +7,7 @@ OUTPUTS = 10
 SAMPLES_USED = 2100
 #  - an output layer with 1 neuron (o1)
 
-epochs = 100
+max_epoch = 100
 
 
 # Gets a value and calculates the sigmoid activation function
@@ -37,6 +37,20 @@ def mse_loss(y_true, y_pred):
     # y_true and y_pred are numpy arrays of the same length.
     return ((y_true - y_pred) ** 2).mean()
 
+# Moving average difference function
+# num_elements to use with np arrays: considers elements to be only num_elements long
+def moving_avg_diff(elements, window_size, num_elements):
+    if num_elements < 12:
+        # Simply return average if less elements than the window size
+        return sum(elements)/num_elements
+    else:
+        diff = 0
+        # Calculate moving sum of differences
+        for i in range(1, window_size):
+            diff += abs(elements[num_elements - i] - elements[num_elements - i + 1])
+
+        # Return average of
+        return diff / (window_size - 1)
 
 class OurNeuralNetwork:
     '''
@@ -46,13 +60,13 @@ class OurNeuralNetwork:
     Instead, read/run it to understand how this specific network works.
     '''
 
-    def __init__(self, hidden, learn_rate):
+    def __init__(self, hidden, learning_rate):
 
         # Instantiate number of hidden layers
         self.hidden = hidden
 
         # Instantiate learning rate
-        self.learn_rate = learn_rate
+        self.learning_rate = learning_rate
 
         # Stage 1 (INPUTS --> HIDDEN LAYER) weights
         self.weights1 = np.random.normal(size=(self.hidden, INPUTS))
@@ -91,15 +105,16 @@ class OurNeuralNetwork:
         data_train, data_cross_valid, y_train, y_cross_valid = train_test_split(data, all_y_trues, test_size=0.2,
                                                                                 random_state=42)
         # Create an array to track MSE loss for training set
-        mse_loss_trend_train = np.zeros((epochs))
+        mse_loss_trend_train = np.zeros(max_epoch)
 
         # Create an array to track MSE loss for training set
-        mse_loss_trend_cross_validation = np.zeros((epochs))
+        mse_loss_trend_cross_validation = np.zeros(max_epoch)
 
         # Epoch tracking
-        epoch_counter = 0
+        epoch = 0
+        stop = False
 
-        for epoch in range(epochs):
+        while not stop and epoch < max_epoch:
             for x, y_true in zip(data_train, y_train):
                 # Perform one pass of feedfoward() pass manually as we will need some of the values later
                 # -1 --> Collapse by one dimension
@@ -132,25 +147,24 @@ class OurNeuralNetwork:
 
                 # --- Update weights and biases
                 # Stage 2 (HIDDEN LAYER --> OUTPUT) weights
-                self.weights2 -= self.learn_rate * dL_dw2
-                self.bias2 -= self.learn_rate * dL_db2
+                self.weights2 -= self.learning_rate * dL_dw2
+                self.bias2 -= self.learning_rate * dL_db2
 
                 # Stage 1 (INPUTS --> HIDDEN LAYER) weights & biases
-                self.weights1 -= self.learn_rate * dL_dw1
-                self.bias1 -= self.learn_rate * dL_db1
+                self.weights1 -= self.learning_rate * dL_dw1
+                self.bias1 -= self.learning_rate * dL_db1
 
             # Feedforward pass on actual training set -> Generates data for calculating MSE Loss
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
 
             # Calculate and insert MSE Loss on training set for current epoch
-            mse_loss_trend_train[epoch_counter] = mse_loss(y_train, y_preds)
+            mse_loss_trend_train[epoch] = mse_loss(y_train, y_preds)
 
             # Feedforward pass on actual CV set -> Generates data for calculating MSE Loss
             y_preds_cross_valid = np.apply_along_axis(self.feedforward, 1, data_cross_valid)
 
             # Calculate and insert MSE Loss on CV set for current epoch
-            mse_loss_trend_cross_validation[epoch_counter] = mse_loss(y_cross_valid, y_preds_cross_valid)
-            epoch_counter += 1
+            mse_loss_trend_cross_validation[epoch] = mse_loss(y_cross_valid, y_preds_cross_valid)
 
             '''
             # --- Calculate total loss at the end of each 10 epochs
@@ -164,6 +178,13 @@ class OurNeuralNetwork:
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)
             loss = mse_loss(y_train, y_preds)
             print("Epoch %d loss: %.3f" % (epoch, loss))
+
+            # Stop condition
+            if epoch >= 12:
+                # Moving window of 5, stop when avg diff is below vvvvvv
+                stop = moving_avg_diff(mse_loss_trend_cross_validation, 5, epoch) < 0.0015
+
+            epoch += 1
 
         return mse_loss_trend_train, mse_loss_trend_cross_validation
     # Generates 2D data randomly that is shifted, rotated and scaled based on the based values
