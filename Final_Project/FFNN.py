@@ -31,7 +31,6 @@ from TwoLayerNeuralNetwork import TwoLayerNeuralNetwork
 
 # A neural network with:
 INPUTS = 784
-HIDDEN = 40
 OUTPUTS = 10
 SAMPLES_USED = 2100
 #  - an output layer with 1 neuron (o1)
@@ -100,10 +99,10 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     # Call training function on our neural network, giving training data and labels as inputs
     mse_loss_trend_train, mse_loss_trend_cross_validation = network.train(x_train, y_train)
 
-    # Generate a MSE Loss line plot for the training set
+    # Generate an MSE Loss line plot for the training set
     plt.plot(mse_loss_trend_train, color='b', label="MSE Loss - Training Set")
 
-    # Generate a MSE line plot for the CV set
+    # Generate an MSE line plot for the CV set
     plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
     plt.xlabel('Epochs')
     plt.ylabel('MSE Loss')
@@ -207,7 +206,7 @@ def graph_balanced_accuracy_heatmap(Z):
 
 
 
-def peak_balanced_accuracy(x, y):
+def peak_balanced_accuracy(x, y, learn, hidden):
     max_balanced_accuracy = 0.0
     peak_learning_rate = 0
     peak_nuerons = 0
@@ -216,8 +215,8 @@ def peak_balanced_accuracy(x, y):
 
     iteration = 0
     # Testing Network for performance over learning rate and nuerons per layer
-    for i in np.arange(0.05, 0.2, 0.01):
-        for j in range(15):
+    for i in np.arange(learn[0], learn[1], learn[2]):
+        for j in np.arange(hidden[0], hidden[1], hidden[2]):
             print(f"Iteration {iteration}")
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
@@ -242,17 +241,19 @@ def peak_balanced_accuracy(x, y):
         f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
 
 
-def peak_learn_rate(x, y):
+def peak_learn_rate(x, y, learn, hidden):
+    peak_learning_rate = 0
+
     balanced_accuracy_trend = []
 
-    for i in np.arange(0.10, 0.25, 0.01):
+    for i in np.arange(learn[1], learn[2], learn[3]):
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
         # Changes training and test labels from a single column to one-hot vectors
         y_train = one_hot(y_train, 10)
         y_test = one_hot(y_test, 10)
 
-        two_layer_network = TwoLayerNeuralNetwork(HIDDEN, i)
+        two_layer_network = TwoLayerNeuralNetwork(hidden, i)
 
         balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
@@ -292,6 +293,35 @@ def main():
 
     # normalize pixels to either black or white
     x = x / 255.0
+    # Running less of the data so it runs faster
+    x = x[:SAMPLES_USED, :]
+    y = y[:SAMPLES_USED]
+
+    # Instantiate MSE loss trend matrix
+    mse_loss_trend = np.zeros((epochs))
+
+    learn_range = [0.10, 0.25, 0.1]
+    hidden_range = [10, 310, 20]
+
+    # Runs through iterations and returns best learning rate and nuerons
+    # to gives the best balanced accuracy
+    peak_balanced_accuracy(x, y, learn_range, hidden_range)
+
+    '''
+    # Old testing code
+    
+    # Split the data into training data (x_train) and label (y_train) sets
+    # and Test data (x_test) and label (y_test) sets
+    #x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+    # Changes training and test labels from a single column to one-hot vectors
+    #y_train = one_hot(y_train, 10)
+    #y_test = one_hot(y_test, 10)
+    
+    # Create Single Layer Neural Network and trains and plots it
+    #one_layer_network = OurNeuralNetwork()
+    #train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
+    '''
 
     '''
     # Old code from skeleton code
@@ -306,39 +336,9 @@ def main():
 
     # print(x.shape) <-- Debugging? DELETE?
 
-
-    # Running less of the data so it runs faster
-    x = x[:SAMPLES_USED, :]
-    y = y[:SAMPLES_USED]
-
-    # Split the data into training data (x_train) and labels (y_train)
-    # and a CV data (x_test) and labels (y_test)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-
-    # Changes training and test labels from a single column to one-hot vectors
-    y_train = one_hot(y_train, 10)
-    y_test = one_hot(y_test, 10)
-
-    # Instantiate MSE loss trend matrix
-    mse_loss_trend = np.zeros((epochs))
-
-    # Create Single Layer Neural Network and trains and plots it
-    # one_layer_network = OurNeuralNetwork()
-    # train_and_plot_network(one_layer_network, x_train, y_train, x_test, y_test)
-
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
     peak_balanced_accuracy(x, y)
-
-    # Runs through iterations to get the best learning rate
-    # peak_learn_rate(x, y)
-
-    # two_layer_network1 = TwoLayerNeuralNetwork(130, 0.1)
-    #two_layer_network2 = TwoLayerNeuralNetwork(70, 0.12)
-
-    # train_and_plot_network(two_layer_network1, x_train, y_train, x_test, y_test)
-
-    #train_and_plot_network(two_layer_network2, x_train, y_train, x_test, y_test)
 
     # Code to try to get a 3D graph for looking for the best balanced accuracy
     # based on hidden nuerons and learning rate

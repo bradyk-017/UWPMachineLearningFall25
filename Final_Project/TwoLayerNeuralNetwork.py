@@ -182,6 +182,7 @@ class TwoLayerNeuralNetwork:
 
             # Stop condition
             if epoch >= 12:
+                # Moving window of 5, stop when avg diff is below vvvvvv
                 stop = moving_avg_diff(mse_losses_cv, 5, epoch) < 0.0015
 
             epoch += 1
