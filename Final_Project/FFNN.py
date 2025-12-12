@@ -144,7 +144,7 @@ def peak_balanced_accuracy(x, y, learn, hidden):
 
     iteration = 0
     # Testing Network for performance over learning rate and nuerons per layer
-    if learn[0] == learn[1]:
+    for i in np.arange(learn[0], learn[1], learn[2]):
         for j in np.arange(hidden[0], hidden[1], hidden[2]):
             print(f"Iteration {iteration}")
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
@@ -163,26 +163,6 @@ def peak_balanced_accuracy(x, y, learn, hidden):
                 peak_nuerons = j
 
             iteration += 1
-    else:
-        for i in np.arange(learn[0], learn[1], learn[2]):
-            for j in np.arange(hidden[0], hidden[1], hidden[2]):
-                print(f"Iteration {iteration}")
-                x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
-
-                # Changes training and test labels from a single column to one-hot vectors
-                y_train = one_hot(y_train, 10)
-                y_test = one_hot(y_test, 10)
-
-                two_layer_network = TwoLayerNeuralNetwork(j, i)
-
-                balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
-
-                if balanced_accuracy > max_balanced_accuracy:
-                    max_balanced_accuracy = balanced_accuracy
-                    peak_learning_rate = i
-                    peak_nuerons = j
-
-                iteration += 1
 
     print(
         f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
