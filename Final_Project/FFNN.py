@@ -106,6 +106,7 @@ def train_and_plot_network(network, x_train, y_train, x_test, y_test):
     plt.plot(mse_loss_trend_cross_validation, color='r', label="MSE Loss - CV Set")
     plt.xlabel('Epochs')
     plt.ylabel('MSE Loss')
+    plt.title(f"MSE Loss vs Epochs with LR: {network.learning_rate:.2f} & HN: {network.hidden}")
     plt.legend()
 
     # Create an array from the soft score predictions form the Neural Network
@@ -246,7 +247,7 @@ def peak_balanced_accuracy(x, y, learn, hidden):
         f"Max balanced accuracy is {max_balanced_accuracy} with a learning rate of {peak_learning_rate} and {peak_nuerons} nuerons.")
 
 
-def peak_learn_rate(x, y, learn, hidden):
+def peak_learn_rate(x, y, learn: list[float], hidden: int):
     peak_learning_rate = 0
 
     balanced_accuracy_trend = []
@@ -267,6 +268,32 @@ def peak_learn_rate(x, y, learn, hidden):
     plt.plot(balanced_accuracy_trend, color='b', label="Balanced Accuracy")
     plt.xlim(0, 15)
     plt.xlabel('Learning rate, 0.01 times x-value above 0.1')
+    plt.ylabel('Balanced Accuracy')
+    plt.legend()
+
+    plt.show()
+
+def peak_hidden_layers(x, y, learn: float, hidden: list[int]):
+    peak_learning_rate = 0
+
+    balanced_accuracy_trend = []
+
+    for i in np.arange(hidden[0], hidden[1], hidden[2]):
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+        # Changes training and test labels from a single column to one-hot vectors
+        y_train = one_hot(y_train, 10)
+        y_test = one_hot(y_test, 10)
+
+        two_layer_network = TwoLayerNeuralNetwork(i, learn)
+
+        balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
+
+        balanced_accuracy_trend.append(balanced_accuracy)
+
+    plt.plot(balanced_accuracy_trend, color='b', label="Balanced Accuracy")
+    plt.xlim(0, 15)
+    plt.xlabel('Number of hidden neurons per layer')
     plt.ylabel('Balanced Accuracy')
     plt.legend()
 
@@ -313,6 +340,7 @@ def main():
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
     peak_learn_rate(x, y, learn_range, 120)
+    peak_hidden_layers(x, y, learn_range[2], hidden_range)
 
     '''
     # Old testing code
