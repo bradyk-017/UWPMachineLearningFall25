@@ -259,7 +259,7 @@ def peak_learn_rate(x, y, learn: list[float], hidden: int):
         y_train = one_hot(y_train, 10)
         y_test = one_hot(y_test, 10)
 
-        two_layer_network = TwoLayerNeuralNetwork(hidden, i)
+        two_layer_network = OurNeuralNetwork(hidden, i)
 
         balanced_accuracy = train_and_plot_network(two_layer_network, x_train, y_train, x_test, y_test)
 
@@ -334,14 +334,14 @@ def main():
     # Instantiate MSE loss trend matrix
     mse_loss_trend = np.zeros((epochs))
 
-    learn_range = [0.05, 0.20, 0.01]
+    learn_range = [0.12, 0.13, 0.01]
     hidden_range = [0, 15, 1]
 
     # Runs through iterations and returns best learning rate and nuerons
     # to gives the best balanced accuracy
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
-    peak_learn_rate(x, y, learn_range, 120)
+    peak_learn_rate(x, y, learn_range, 200)
     #peak_hidden_layers(x, y, learn_range[2], hidden_range)
 
     '''
