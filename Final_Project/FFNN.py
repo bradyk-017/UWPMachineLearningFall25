@@ -265,9 +265,10 @@ def peak_learn_rate(x, y, learn: list[float], hidden: int):
 
         balanced_accuracy_trend.append(balanced_accuracy)
 
-    plt.plot(balanced_accuracy_trend, color='b', label="Balanced Accuracy")
-    plt.xlim(0, 15)
-    plt.xlabel('Learning rate, 0.01 times x-value above 0.1')
+    plt.plot([x / 100.0 for x in range(5, 21)], balanced_accuracy_trend, color='b', label="Balanced Accuracy")
+    plt.xlim(0.05, 0.20)
+    plt.title('Balanced Accuracy w/ Learning Rate Sweep')
+    plt.xlabel('Learning rate')
     plt.ylabel('Balanced Accuracy')
     plt.legend()
 
@@ -291,8 +292,9 @@ def peak_hidden_layers(x, y, learn: float, hidden: list[int]):
 
         balanced_accuracy_trend.append(balanced_accuracy)
 
-    plt.plot(balanced_accuracy_trend, color='b', label="Balanced Accuracy")
-    plt.xlim(0, 15)
+    plt.plot(list(range(10, 320, 20)), balanced_accuracy_trend, color='b', label="Balanced Accuracy")
+    plt.xlim(10, 310)
+    plt.title('Balanced Accuracy w/ Hidden Neuron Sweep')
     plt.xlabel('Number of hidden neurons per layer')
     plt.ylabel('Balanced Accuracy')
     plt.legend()
@@ -340,7 +342,7 @@ def main():
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
     # peak_balanced_accuracy(x, y, learn_range, hidden_range)
     peak_learn_rate(x, y, learn_range, 120)
-    peak_hidden_layers(x, y, learn_range[2], hidden_range)
+    #peak_hidden_layers(x, y, learn_range[2], hidden_range)
 
     '''
     # Old testing code
