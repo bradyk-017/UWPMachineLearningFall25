@@ -11,6 +11,9 @@
 #          - Calculate and return MSE loss vectors for the actual training set and the CV set across training epochs
 #    - Added generate_cluster() and generate_clusters() functions for synthetic dataset generation
 #    - Added random data split to generate training and test sets from the synthetic dataset
+# More code modification done by Zach, Brady, Titus, and Ashton
+
+
 
 import numpy as np
 import matplotlib.pyplot as plt

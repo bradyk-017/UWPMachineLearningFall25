@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
+# More code modification done by Zach, Brady, Titus, and Ashton
 
 INPUTS = 784
 OUTPUTS = 10
