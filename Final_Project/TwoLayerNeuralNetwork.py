@@ -81,20 +81,21 @@ class TwoLayerNeuralNetwork:
 
 
     def feedforward(self, x):
-        # x is a numpy array with 2 elements.
+        # x is a numpy array of 784 elements (e.g., flattened MNIST image).
         # -1 --> Collapse by one dimension
         x = x.reshape(-1, 1)
 
-        # Hidden layer: h (activation function) = sigmoid
-        z1 = self.weights1.dot(x) + self.bias1  # [4×784] @ [784×1] → [4×1]
+        # Hidden layer 1: h1 (activation function) = sigmoid
+        z1 = self.weights1.dot(x) + self.bias1  # [hidden_neurons×784] @ [784×1] → [120×1]
         h1 = sigmoid(z1)
 
-        # Output layer: z2 = W2*h1 + b2
+        # Hidden layer 2: z2 = W2*h1 + b2
         z2 = self.weights2.dot(h1) + self.bias2
+        # [hidden_neurons×hidden_neurons] @ [hidden_neurons×1] → [hidden_neurons×1]
         h2 = sigmoid(z2)
 
         # Output layer: z3 = W3*h2 + b3
-        z3 = self.weights3.dot(h2) + self.bias3  # [10×4] @ [4×1] → [10×1]
+        z3 = self.weights3.dot(h2) + self.bias3  # [10×hidden_neurons] @ [hidden_neurons×1] → [10×1]
         o = softmax(z3)
         return o.flatten()
 
@@ -112,8 +113,10 @@ class TwoLayerNeuralNetwork:
         # Continue iterating while the moving average of MSE loss is
         # above the threshold and not hit max epochs
         while not stop and epoch < max_epoch:
+            # Training loop with backprop
             for x, y_true in zip(data_train, y_train):
-                # 1. Ensure column vectors
+                # 1. Ensure column vectors by appending second row onto first row and reshaping
+                #    as column vector.
                 x = x.reshape(-1, 1)  # (784,1)
                 y_true = y_true.reshape(-1, 1)  # (10,1)
 
@@ -130,38 +133,39 @@ class TwoLayerNeuralNetwork:
                 o = softmax(z3)
                 y_pred = o
                 y_pred = y_pred.reshape(-1, 1)  # (10,1)
+
                 # --- Calculate partial derivatives.
                 # --- Naming: d_L_d_w1 represents "partial L / partial w1"
 
                 # Output layer gradient
-                dL_dy = 2 * (y_pred - y_true)  # (10,1)
-                dL_dw3 = dL_dy.dot(h2.T)  # (output_size, hidden_size) = (10,4)
+                dL_dy = 2 * (y_pred - y_true)  # (10,1)          = (output_size, 1)
+                dL_dw3 = dL_dy.dot(h2.T)  # (10,120)        = (output_size, hidden_size)
                 dL_db3 = dL_dy  # (10,1)
-                dL_dh2 = self.weights3.T.dot(dL_dy)  # (hidden_size,1) = (4,1)
+                dL_dh2 = self.weights3.T.dot(dL_dy)  # (120,1)         = (hidden_size, 1)
 
                 # 2nd Hidden layer gradient
-                dL_dz2 = dL_dh2 * deriv_sigmoid(z2)
-                dL_dw2 = dL_dz2.dot(h1.T)
-                dL_db2 = dL_dz2
-                dL_dh1 = self.weights2.T.dot(dL_dz2)
+                dL_dz2 = dL_dh2 * deriv_sigmoid(z2)  # (120,1)
+                dL_dw2 = dL_dz2.dot(h1.T)  # (120,120)       = (hidden_size, hidden_size)
+                dL_db2 = dL_dz2  # (120,1)
+                dL_dh1 = self.weights2.T.dot(dL_dz2)  # (120,1)         = (hidden_size, 1)
 
                 # 1st Hidden layer gradient
-                dL_dz1 = dL_dh1 * deriv_sigmoid(z1)
-                dL_dw1 = dL_dz1.dot(x.T)
-                dL_db1 = dL_dz1
+                dL_dz1 = dL_dh1 * deriv_sigmoid(z1)  # (120,1)
+                dL_dw1 = dL_dz1.dot(x.T)  # (120,784)       = (hidden_size, input_size)
+                dL_db1 = dL_dz1  # (120,1)
 
                 # --- Update weights and biases
                 # Stage 3 (HIDDEN LAYER 2 --> OUTPUT) weights & biases
-                self.weights3 -= self.learning_rate * dL_dw3
-                self.bias3 -= self.learning_rate * dL_db3
+                self.weights3 -= self.learning_rate * dL_dw3  # (10,120)
+                self.bias3 -= self.learning_rate * dL_db3  # (10,1)
 
                 # Stage 2 (HIDDEN LAYER 1 --> HIDDEN LAYER 2) weights & biases
-                self.weights2 -= self.learning_rate * dL_dw2
-                self.bias2 -= self.learning_rate * dL_db2
+                self.weights2 -= self.learning_rate * dL_dw2  # (120,120)
+                self.bias2 -= self.learning_rate * dL_db2  # (120,1)
 
-                # Stage 1 (INPUTS --> HIDDEN LAYER) weights & biases
-                self.weights1 -= self.learning_rate * dL_dw1
-                self.bias1 -= self.learning_rate * dL_db1
+                # Stage 1 (INPUTS --> HIDDEN LAYER 1) weights & biases
+                self.weights1 -= self.learning_rate * dL_dw1  # (120,784)
+                self.bias1 -= self.learning_rate * dL_db1  # (120,1)
 
             # Feedforward pass on actual training set -> Generates data for calculating MSE Loss
             y_preds = np.apply_along_axis(self.feedforward, 1, data_train)

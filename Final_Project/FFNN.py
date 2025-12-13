@@ -338,6 +338,8 @@ def main():
     x = x[:SAMPLES_USED, :]
     y = y[:SAMPLES_USED]
 
+    print(x.shape)
+
     # Instantiate MSE loss trend matrix
     mse_loss_trend = np.zeros((epochs))
 

@@ -67,6 +67,7 @@ class OurNeuralNetwork:
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
         # -1 --> Collapse by one dimension
+        print(x.shape)
         x = x.reshape(-1, 1)
 
         # Hidden layer: h (activation function) = sigmoid
@@ -94,7 +95,8 @@ class OurNeuralNetwork:
         while not stop and epoch < max_epoch:
             for x, y_true in zip(data_train, y_train):
                 # Perform one pass of feedfoward() pass manually as we will need some of the values later
-                # -1 --> Collapse by one dimension
+
+                # Ensures x is (784, 1) instead of (784, )
                 x = x.reshape(-1, 1)
                 y_true = y_true.reshape(-1, 1)
 
