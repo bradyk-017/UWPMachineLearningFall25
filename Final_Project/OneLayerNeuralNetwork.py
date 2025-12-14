@@ -27,6 +27,8 @@ def softmax(z):
 # the mean squared error, which is then returned
 def mse_loss(y_true, y_pred):
     # y_true and y_pred are numpy arrays of the same length.
+    print(y_true.shape)
+    print(y_pred.shape)
     return ((y_true - y_pred) ** 2).mean()
 
 # Moving average difference function
@@ -67,7 +69,6 @@ class OurNeuralNetwork:
     def feedforward(self, x):
         # x is a numpy array with 2 elements.
         # -1 --> Collapse by one dimension
-        print(x.shape)
         x = x.reshape(-1, 1)
 
         # Hidden layer: h (activation function) = sigmoid
